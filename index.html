@@ -38,6 +38,18 @@
         .row-odd td { background-color: #ffffff; }
         .row-even td { background-color: #e5e7eb; }
         .table-bordered tbody tr td[rowspan="2"] { background-color: #e5e7eb; font-weight: bold; }
+
+        /* Estilos específicos para mobile na tabela S-13 */
+        @media (max-width: 640px) {
+            .s13-table-mobile th, .s13-table-mobile td {
+                padding: 2px 4px;
+                font-size: 12px;
+                height: 28px;
+            }
+            .s13-table-mobile .name-cell {
+                font-size: 11px; /* Nomes ainda menores para caber */
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -48,17 +60,17 @@
             <button id="nav-button" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
                 S-13
             </button>
-            <h1 id="nav-title" class="text-xl font-bold">Painel Principal</h1>
+            <h1 id="nav-title" class="text-lg sm:text-xl font-bold">Painel Principal</h1>
         </div>
     </nav>
 
     <!-- Container da Aplicação Principal -->
-    <div id="territory-manager-view" class="container mx-auto p-4 md:p-8">
+    <div id="territory-manager-view" class="container mx-auto p-2 sm:p-4 md:p-8">
         <!-- Cabeçalho -->
         <header class="text-center mb-8 relative">
-            <h1 class="text-4xl font-bold text-gray-900">Painel de Controle de Territórios</h1>
-            <p class="text-lg text-gray-600 mt-2">Gestão visual do progresso e geração de mensagens.</p>
-            <div class="absolute top-0 right-0 flex items-center gap-2">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Painel de Controle de Territórios</h1>
+            <p class="text-base sm:text-lg text-gray-600 mt-2">Gestão visual do progresso e geração de mensagens.</p>
+            <div class="absolute top-0 right-0 flex items-center gap-1 sm:gap-2">
                 <button id="open-history-modal-btn" title="Histórico de Designações" class="p-2 text-gray-500 hover:text-gray-800 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </button>
@@ -69,23 +81,23 @@
         </header>
 
         <!-- Seção de Designação -->
-        <div class="bg-white p-6 rounded-2xl shadow-md mb-8">
+        <div class="bg-white p-4 sm:p-6 rounded-2xl shadow-md mb-8">
             <div class="flex border-b pb-4 mb-6 gap-2">
                 <button id="mode-weekday" class="mode-btn-active flex-1 font-semibold py-2 px-4 rounded-lg transition-colors">Dias de Semana</button>
                 <button id="mode-weekend" class="mode-btn-inactive flex-1 font-semibold py-2 px-4 rounded-lg transition-colors">Final de Semana</button>
             </div>
 
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
-                <h2 class="text-2xl font-semibold mb-2 sm:mb-0">Designação da Programação</h2>
-                <div class="flex items-center gap-2">
-                    <label for="week-picker" class="text-sm font-medium text-gray-700">Selecionar Data:</label>
-                    <input type="date" id="week-picker" class="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                <h2 class="text-xl sm:text-2xl font-semibold text-center sm:text-left">Designação da Programação</h2>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <label for="week-picker" class="text-sm font-medium text-gray-700 whitespace-nowrap">Selecionar Data:</label>
+                    <input type="date" id="week-picker" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
             </div>
             <p id="week-dates" class="text-md text-gray-600 mb-6 text-center sm:text-left"></p>
             
-            <div id="weekday-assignments-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6"></div>
-            <div id="weekend-assignments-container" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"></div>
+            <div id="weekday-assignments-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6"></div>
+            <div id="weekend-assignments-container" class="hidden grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"></div>
 
             <div class="text-center border-t pt-6">
                  <button id="generate-message-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700">Gerar e Registrar Designações</button>
@@ -94,7 +106,7 @@
             <div id="message-output-container" class="hidden mt-6">
                 <label for="whatsapp-message" class="block mb-2 font-medium text-gray-700">Mensagem gerada:</label>
                 <textarea id="whatsapp-message" rows="10" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50" readonly></textarea>
-                <div class="flex gap-2 mt-2">
+                <div class="flex flex-col sm:flex-row gap-2 mt-2">
                     <a id="send-whatsapp-link" href="#" target="_blank" class="flex-1 inline-flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
                         <span>WhatsApp</span>
@@ -109,34 +121,34 @@
         </div>
 
         <div class="flex justify-between items-center mb-4">
-            <h2 id="grid-title" class="text-2xl font-semibold">Territórios Ativos</h2>
-            <button id="toggle-archived-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Mostrar Arquivados</button>
+            <h2 id="grid-title" class="text-xl sm:text-2xl font-semibold">Territórios Ativos</h2>
+            <button id="toggle-archived-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 text-sm sm:text-base">Mostrar Arquivados</button>
         </div>
 
-        <div id="territory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+        <div id="territory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
         
         <div class="mt-8 text-center border-t pt-6">
-            <button id="reset-territories-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Todos os Territórios</button>
+            <button id="reset-territories-btn" class="w-full sm:w-auto bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Todos os Territórios</button>
         </div>
     </div>
 
     <!-- Container para a Aplicação S-13 -->
-    <div id="s13-view" class="hidden container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+    <div id="s13-view" class="hidden container mx-auto p-2 sm:p-4 md:p-8">
         <header class="text-center mb-4">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-700">Registro de Territórios S-13</h1>
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-700">Registro de Territórios S-13</h1>
         </header>
-        <div class="text-center mb-8 flex justify-center gap-4">
+        <div class="text-center mb-8 flex flex-col sm:flex-row justify-center gap-4">
              <button id="open-add-record-modal-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700">Adicionar Registro</button>
              <button id="open-names-modal-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600">Gerenciar Nomes</button>
         </div>
         
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
              <div class="text-center py-2 flex justify-between items-center px-4">
-                <h2 class="text-xl font-bold">Ano de Serviço: 2025</h2>
+                <h2 class="text-lg sm:text-xl font-bold">Ano de Serviço: 2025</h2>
                 <div id="s13-pagination-controls" class="flex items-center gap-2"></div>
             </div>
-            <div class="overflow-x-auto p-4">
-                <table id="s13-planilha" class="w-full table-bordered text-sm">
+            <div class="overflow-x-auto p-2 sm:p-4">
+                <table id="s13-planilha" class="w-full table-bordered s13-table-mobile text-sm">
                     <thead>
                         <tr>
                             <th rowspan="2" class="w-16">Terr. n.º</th><th rowspan="2" class="w-24">Última data concluída</th>
@@ -152,7 +164,7 @@
                 </table>
             </div>
         </div>
-        <div class="mt-8 text-center flex justify-center gap-4">
+        <div class="mt-8 text-center flex flex-col sm:flex-row justify-center gap-4">
             <button id="s13-baixar-excel" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-green-700">Baixar Planilha (Excel)</button>
             <button id="s13-reset-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Planilha</button>
         </div>
@@ -1023,5 +1035,3 @@
 
 </body>
 </html>
-"
-I would like you to add a button to the S-13 page to delete the entire r
