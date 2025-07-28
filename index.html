@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle de Territórios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal-body::-webkit-scrollbar { width: 8px; }
+        .modal-body::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .modal-body::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .modal-body::-webkit-scrollbar-thumb:hover { background: #555; }
+        .selection-badge {
+            display: inline-flex; align-items: center; background-color: #e0e7ff;
+            color: #3730a3; padding: 4px 8px; border-radius: 16px;
+            font-size: 14px; font-weight: 500; margin: 2px;
+        }
+        .selection-badge button {
+            margin-left: 6px; color: #4f46e5; background: none;
+            border: none; cursor: pointer; font-weight: bold;
+        }
+        .mode-btn-active { background-color: #4f46e5; color: white; }
+        .mode-btn-inactive { background-color: #e5e7eb; color: #374151; }
+        input[type="date"]:before {
+            content: attr(placeholder) !important; color: #9ca3af; margin-right: 0.5em;
+        }
+        input[type="date"]:focus:before, input[type="date"]:valid:before { content: ""; }
+        .table-bordered th, .table-bordered td {
+            border: 1px solid #000; padding: 4px 8px; text-align: center;
+            vertical-align: middle; height: 30px;
+        }
+        .table-bordered thead th { background-color: #e5e7eb; font-weight: bold; }
+        .s13-delete-btn { background: none; border: none; color: red; cursor: pointer; font-weight: bold; margin-left: 10px; }
+        .name-cell { font-weight: 500; }
+        .row-odd td { background-color: #ffffff; }
+        .row-even td { background-color: #e5e7eb; }
+        .table-bordered tbody tr td[rowspan="2"] { background-color: #e5e7eb; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Barra de Navegação Superior -->
+    <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-40">
+        <div class="container mx-auto flex justify-between items-center">
+            <button id="nav-button" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
+                S-13
+            </button>
+            <h1 id="nav-title" class="text-xl font-bold">Painel Principal</h1>
+        </div>
+    </nav>
+
+    <!-- Container da Aplicação Principal -->
+    <div id="territory-manager-view" class="container mx-auto p-4 md:p-8">
+        <!-- Cabeçalho -->
+        <header class="text-center mb-8 relative">
+            <h1 class="text-4xl font-bold text-gray-900">Painel de Controle de Territórios</h1>
+            <p class="text-lg text-gray-600 mt-2">Gestão visual do progresso e geração de mensagens.</p>
+            <div class="absolute top-0 right-0 flex items-center gap-2">
+                <button id="open-history-modal-btn" title="Histórico de Designações" class="p-2 text-gray-500 hover:text-gray-800 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </button>
+                <button id="open-settings-modal-btn" title="Configurações de Designação" class="p-2 text-gray-500 hover:text-gray-800 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Seção de Designação -->
+        <div class="bg-white p-6 rounded-2xl shadow-md mb-8">
+            <div class="flex border-b pb-4 mb-6 gap-2">
+                <button id="mode-weekday" class="mode-btn-active flex-1 font-semibold py-2 px-4 rounded-lg transition-colors">Dias de Semana</button>
+                <button id="mode-weekend" class="mode-btn-inactive flex-1 font-semibold py-2 px-4 rounded-lg transition-colors">Final de Semana</button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold mb-2 sm:mb-0">Designação da Programação</h2>
+                <div class="flex items-center gap-2">
+                    <label for="week-picker" class="text-sm font-medium text-gray-700">Selecionar Data:</label>
+                    <input type="date" id="week-picker" class="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+            <p id="week-dates" class="text-md text-gray-600 mb-6 text-center sm:text-left"></p>
+            
+            <div id="weekday-assignments-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6"></div>
+            <div id="weekend-assignments-container" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"></div>
+
+            <div class="text-center border-t pt-6">
+                 <button id="generate-message-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700">Gerar e Registrar Designações</button>
+            </div>
+
+            <div id="message-output-container" class="hidden mt-6">
+                <label for="whatsapp-message" class="block mb-2 font-medium text-gray-700">Mensagem gerada:</label>
+                <textarea id="whatsapp-message" rows="10" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50" readonly></textarea>
+                <div class="flex gap-2 mt-2">
+                    <a id="send-whatsapp-link" href="#" target="_blank" class="flex-1 inline-flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
+                        <span>WhatsApp</span>
+                    </a>
+                    <button id="copy-message-btn" class="flex-1 inline-flex items-center justify-center gap-2 bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zM-1 8a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 0 1H-.5A.5.5 0 0 1-1 8z"/></svg>
+                        <span>Copiar</span>
+                    </button>
+                </div>
+                 <span id="copy-success" class="mt-2 text-green-600 font-medium hidden">Mensagem copiada com sucesso!</span>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center mb-4">
+            <h2 id="grid-title" class="text-2xl font-semibold">Territórios Ativos</h2>
+            <button id="toggle-archived-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Mostrar Arquivados</button>
+        </div>
+
+        <div id="territory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+        
+        <div class="mt-8 text-center border-t pt-6">
+            <button id="reset-territories-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Todos os Territórios</button>
+        </div>
+    </div>
+
+    <!-- Container para a Aplicação S-13 -->
+    <div id="s13-view" class="hidden container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+        <header class="text-center mb-4">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-700">Registro de Territórios S-13</h1>
+        </header>
+        <div class="text-center mb-8 flex justify-center gap-4">
+             <button id="open-add-record-modal-btn" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700">Adicionar Registro</button>
+             <button id="open-names-modal-btn" class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600">Gerenciar Nomes</button>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+             <div class="text-center py-2 flex justify-between items-center px-4">
+                <h2 class="text-xl font-bold">Ano de Serviço: 2025</h2>
+                <div id="s13-pagination-controls" class="flex items-center gap-2"></div>
+            </div>
+            <div class="overflow-x-auto p-4">
+                <table id="s13-planilha" class="w-full table-bordered text-sm">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="w-16">Terr. n.º</th><th rowspan="2" class="w-24">Última data concluída</th>
+                            <th colspan="2">Designado para</th><th colspan="2">Designado para</th>
+                            <th colspan="2">Designado para</th><th colspan="2">Designado para</th>
+                        </tr>
+                        <tr>
+                            <th>Data da desig.</th><th>Data da conclusão</th><th>Data da desig.</th><th>Data da conclusão</th>
+                            <th>Data da desig.</th><th>Data da conclusão</th><th>Data da desig.</th><th>Data da conclusão</th>
+                        </tr>
+                    </thead>
+                    <tbody id="s13-planilha-corpo"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="mt-8 text-center flex justify-center gap-4">
+            <button id="s13-baixar-excel" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-green-700">Baixar Planilha (Excel)</button>
+            <button id="s13-reset-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Planilha</button>
+        </div>
+    </div>
+
+    <!-- Modais -->
+    <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md"><div class="p-6 border-b flex justify-between items-center"><h2 id="status-modal-title" class="text-2xl font-bold"></h2><button id="close-status-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 max-h-[60vh] overflow-y-auto modal-body"><div id="status-modal-blocks-container" class="space-y-3"></div></div><div class="p-6 bg-gray-50 rounded-b-2xl text-right"><button id="save-status-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Fechar</button></div></div>
+    </div>
+    <div id="selection-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg"><div class="p-6 border-b flex justify-between items-center"><h2 id="selection-modal-title" class="text-2xl font-bold"></h2><button id="close-selection-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div id="selection-modal-body" class="p-6 max-h-[60vh] overflow-y-auto modal-body grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div><div class="p-6 bg-gray-50 rounded-b-2xl text-right"><button id="confirm-selection-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar</button></div></div>
+    </div>
+    <div id="s13-names-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative"><button id="s13-close-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button><h2 class="text-xl font-semibold mb-4 text-gray-800">Gerenciar Publicadores</h2><form id="s13-add-name-form" class="flex items-end gap-4 mb-4"><div class="flex-grow"><label for="s13-novo-nome-input" class="block text-sm font-medium text-gray-700 mb-1">Nome do Publicador</label><input type="text" id="s13-novo-nome-input" placeholder="Digite um novo nome" class="w-full px-3 py-2 border border-gray-300 rounded-md"></div><button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700">Cadastrar</button></form><h3 class="text-lg font-medium text-gray-700 mb-2">Nomes Cadastrados:</h3><div class="max-h-60 overflow-y-auto border p-2 rounded-md"><ul id="s13-lista-publicadores" class="list-disc list-inside space-y-1"></ul></div></div>
+    </div>
+    <div id="s13-add-record-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl relative">
+            <button id="s13-close-add-record-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Adicionar Novo Registro</h2>
+            <form id="s13-registro-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div><label for="s13-territorio-numero" class="block text-sm font-medium text-gray-700 mb-1">Número do Território</label><input type="number" id="s13-territorio-numero" placeholder="1-46" min="1" max="46" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>
+                <div><label for="s13-nome-select" class="block text-sm font-medium text-gray-700 mb-1">Designado para (Nome)</label><select id="s13-nome-select" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white"></select></div>
+                <div><label for="s13-data-inicio" class="block text-sm font-medium text-gray-700 mb-1">Data da Designação</label><input type="date" id="s13-data-inicio" placeholder="Selecione a data" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>
+                <div><label for="s13-data-conclusao" class="block text-sm font-medium text-gray-700 mb-1">Data da Conclusão</label><input type="date" id="s13-data-conclusao" placeholder="Selecione a data" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700">Adicionar à Planilha</button>
+            </form>
+        </div>
+    </div>
+    <div id="settings-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl relative">
+            <button id="close-settings-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Configurações de Designação</h2>
+            <form id="settings-form">
+                <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-4 modal-body">
+                    <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Dias de Semana</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="weekday-settings-container"></div>
+                    <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mt-6">Final de Semana</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="weekend-settings-container"></div>
+                </div>
+                <div class="mt-6 pt-4 border-t flex justify-end gap-4">
+                    <button type="button" id="cancel-settings-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-md hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-blue-700">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="history-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl relative">
+            <button id="close-history-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Histórico de Designações</h2>
+            <div id="history-container" class="space-y-4 max-h-[60vh] overflow-y-auto pr-4 modal-body">
+                <!-- Histórico é gerado via JS -->
+            </div>
+        </div>
+    </div>
+    <div id="confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h2 id="confirmation-title" class="text-xl font-bold mb-4"></h2>
+            <p id="confirmation-message" class="mb-6"></p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-action-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Confirmar</button>
+                <button id="cancel-action-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-md hover:bg-gray-400">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE INICIALIZAÇÃO DO FIREBASE (MODULAR) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyK9M4Fg-iU9IVrNqWmuvDJExhnSnyrbI",
+            authDomain: "territorios-3c460.firebaseapp.com",
+            projectId: "territorios-3c460",
+            storageBucket: "territorios-3c460.appspot.com",
+            messagingSenderId: "604583240744",
+            appId: "1:604583240744:web:69d70fb10596774045411d",
+            measurementId: "G-WKYBRTJGQ6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.dispatchEvent(new CustomEvent('firebaseReady', { detail: { db, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } }));
+    </script>
+
+
+    <!-- SCRIPT PRINCIPAL DA APLICAÇÃO -->
+    <script>
+    document.addEventListener('firebaseReady', ({ detail }) => {
+        const { db, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } = detail;
+
+        // =================================================================
+        // PAINEL DE CONTROLE DE TERRITÓRIOS - LÓGICA
+        // =================================================================
+        const territoryManager = {
+            defaultConfig: {
+                weekday: { 'SEGUNDA': 'Silvino Amorim', 'TERÇA': 'Vitor ou Wagner', 'QUARTA': 'Getulio Rodrigues', 'QUINTA': 'Ivo Janson', 'SEXTA': 'Francisco Godoy' },
+                weekend: { 'SABADO-1': 'GRUPOS 1, 2 e 3', 'SABADO-2': 'GRUPOS 4 e 5', 'SABADO-3': 'GRUPOS 6, 7 e 8', 'DOMINGO': 'Responsável do Domingo' },
+                weekendGroupNames: { 'SABADO-1': 'Marcio Arruda', 'SABADO-2': 'Francisco Godoy', 'SABADO-3': 'Willian Lindem' },
+                rural: ['Iteraçu', 'Barra', 'Barreirinho', 'Canguera', 'Plens', 'Guarapiranga', 'Iperozinho', 'Morro']
+            },
+            state: { 
+                config: {},
+                status: {}, weekdaySelections: {}, weekendSelections: {}, archived: [], mode: 'weekday', showArchived: false, assignmentLog: {},
+                selectedDate: new Date(),
+                history: []
+            },
+            ui: {
+                grid: document.getElementById('territory-grid'), statusModal: document.getElementById('status-modal'), selectionModal: document.getElementById('selection-modal'),
+                weekdayContainer: document.getElementById('weekday-assignments-container'), weekendContainer: document.getElementById('weekend-assignments-container'),
+                modeWeekdayBtn: document.getElementById('mode-weekday'), modeWeekendBtn: document.getElementById('mode-weekend'),
+                generateMessageBtn: document.getElementById('generate-message-btn'), messageOutputContainer: document.getElementById('message-output-container'),
+                whatsappMessage: document.getElementById('whatsapp-message'), sendWhatsappLink: document.getElementById('send-whatsapp-link'), copyMessageBtn: document.getElementById('copy-message-btn'),
+                copySuccess: document.getElementById('copy-success'), toggleArchivedBtn: document.getElementById('toggle-archived-btn'),
+                gridTitle: document.getElementById('grid-title'), weekDates: document.getElementById('week-dates'),
+                weekPicker: document.getElementById('week-picker'),
+                resetTerritoriesBtn: document.getElementById('reset-territories-btn'),
+                settingsModal: document.getElementById('settings-modal'),
+                openSettingsBtn: document.getElementById('open-settings-modal-btn'),
+                closeSettingsBtn: document.getElementById('close-settings-modal-btn'),
+                cancelSettingsBtn: document.getElementById('cancel-settings-btn'),
+                settingsForm: document.getElementById('settings-form'),
+                weekdaySettingsContainer: document.getElementById('weekday-settings-container'),
+                weekendSettingsContainer: document.getElementById('weekend-settings-container'),
+                historyModal: document.getElementById('history-modal'),
+                openHistoryBtn: document.getElementById('open-history-modal-btn'),
+                closeHistoryBtn: document.getElementById('close-history-modal-btn'),
+                historyContainer: document.getElementById('history-container'),
+            },
+            data: [
+                {id: 1, blocks: ['A', 'B', 'C', 'D']}, {id: 2, blocks: ['A', 'B', 'C', 'D']}, {id: 3, blocks: ['A', 'B']}, {id: 4, blocks: ['A', 'B', 'C']}, {id: 5, blocks: ['A', 'B', 'C']},
+                {id: 6, blocks: ['A', 'B', 'C']}, {id: 7, blocks: ['A', 'B', 'C', 'D']}, {id: 8, blocks: ['A', 'B', 'C', 'D']}, {id: 9, blocks: ['A', 'B', 'C']}, {id: 10, blocks: ['A', 'B', 'C']},
+                {id: 11, blocks: ['A', 'B']}, {id: 12, blocks: ['A', 'B', 'C', 'D']}, {id: 13, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 14, blocks: ['A']}, {id: 15, blocks: ['A', 'B', 'C', 'D', 'E']},
+                {id: 16, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 17, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 18, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 19, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']},
+                {id: 20, blocks: ['A', 'B', 'C']}, {id: 21, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 22, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 23, blocks: ['A', 'B', 'C']}, {id: 24, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']},
+                {id: 25, blocks: ['A', 'B', 'C']}, {id: 26, blocks: ['A', 'B', 'C', 'D']}, {id: 27, blocks: ['A', 'B', 'C', 'D']}, {id: 28, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 29, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']},
+                {id: 30, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']}, {id: 31, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']}, {id: 32, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']},
+                {id: 33, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 34, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']}, {id: 35, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']}, {id: 36, blocks: ['A', 'B', 'C']},
+                {id: 37, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']}, {id: 38, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']}, {id: 39, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'L', 'M']},
+                {id: 40, blocks: ['A', 'B']}, {id: 41, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 42, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 43, blocks: ['A', 'B', 'C', 'D']}, {id: 44, blocks: ['A', 'B', 'C']},
+                {id: 45, blocks: ['A', 'B', 'C', 'D']}, {id: 46, blocks: ['A']}
+            ],
+
+            initialize() {
+                this.listenForRealtimeUpdates();
+                this.setupEventListeners();
+                this.setupWeekPicker();
+            },
+
+            listenForRealtimeUpdates() {
+                onSnapshot(doc(db, "appState", "mainState"), (docSnapshot) => {
+                    console.log("Recebida atualização do 'mainState'");
+                    const mainState = docSnapshot.exists() ? docSnapshot.data() : {};
+                    this.state.status = mainState.status || {};
+                    this.state.weekdaySelections = mainState.weekdaySelections || {};
+                    this.state.weekendSelections = mainState.weekendSelections || {};
+                    this.state.archived = mainState.archived || [];
+                    this.state.assignmentLog = mainState.assignmentLog || {};
+                    this.state.mode = mainState.mode || 'weekday';
+                    this.data.forEach(t => { if (!this.state.status[t.id]) { this.state.status[t.id] = {}; t.blocks.forEach(b => { this.state.status[t.id][b] = false; }); } });
+                    this.renderAll();
+                });
+
+                onSnapshot(doc(db, "appState", "assignmentsConfig"), (docSnapshot) => {
+                    console.log("Recebida atualização da 'assignmentsConfig'");
+                    const configData = docSnapshot.exists() ? docSnapshot.data() : {};
+                    this.state.config = {
+                        ...this.defaultConfig, ...configData,
+                        weekday: { ...this.defaultConfig.weekday, ...(configData.weekday || {}) },
+                        weekend: { ...this.defaultConfig.weekend, ...(configData.weekend || {}) },
+                    };
+                    this.renderAssignmentCards();
+                });
+
+                const historyQuery = query(collection(db, "assignmentHistory"), orderBy("timestamp", "desc"), limit(50));
+                onSnapshot(historyQuery, (querySnapshot) => {
+                    console.log("Recebida atualização do 'assignmentHistory'");
+                    this.state.history = [];
+                    querySnapshot.forEach((doc) => {
+                        this.state.history.push({ id: doc.id, ...doc.data() });
+                    });
+                    this.renderHistory();
+                });
+            },
+
+            async saveState() {
+                try {
+                    const mainStateData = {
+                        status: this.state.status,
+                        weekdaySelections: this.state.weekdaySelections,
+                        weekendSelections: this.state.weekendSelections,
+                        archived: this.state.archived,
+                        assignmentLog: this.state.assignmentLog,
+                        mode: this.state.mode
+                    };
+                    await setDoc(doc(db, "appState", "mainState"), mainStateData, { merge: true });
+                    console.log("Estado principal salvo no Firestore!");
+                } catch (error) {
+                    console.error("Erro ao salvar o estado principal:", error);
+                }
+            },
+            
+            renderAll() { 
+                this.updateDateDisplay(); 
+                this.renderGrid(); 
+                this.renderAssignmentCards(); 
+                this.setMode(this.state.mode, false);
+            },
+            renderGrid() {
+                this.ui.grid.innerHTML = '';
+                const territoriesToDisplay = this.data.filter(t => this.state.showArchived ? this.state.archived.includes(t.id) : !this.state.archived.includes(t.id));
+                if (territoriesToDisplay.length === 0) { this.ui.grid.innerHTML = `<p class="col-span-full text-center text-gray-500">${this.state.showArchived ? 'Nenhum território arquivado.' : 'Nenhum território ativo.'}</p>`; }
+                else { territoriesToDisplay.forEach(t => this.ui.grid.appendChild(this.createTerritoryCard(t))); }
+            },
+            createTerritoryCard(t) {
+                const card = document.createElement('div');
+                const isArchived = this.state.archived.includes(t.id);
+                card.className = `territory-card bg-white p-5 rounded-2xl shadow-md flex flex-col transition-all duration-300 ${isArchived ? 'opacity-70' : 'hover:shadow-xl hover:-translate-y-1'}`;
+                card.dataset.territoryId = t.id;
+                const p = this.getTerritoryProgress(t.id);
+                let actionButton = '';
+                if (isArchived) { actionButton = `<button class="restore-btn mt-4 w-full bg-green-100 text-green-700 font-semibold py-2 px-4 rounded-lg hover:bg-green-200" data-id="${t.id}">Restaurar</button>`; }
+                else if (p.progress === 100) { actionButton = `<button class="archive-btn mt-4 w-full bg-blue-100 text-blue-700 font-semibold py-2 px-4 rounded-lg hover:bg-blue-200" data-id="${t.id}">Arquivar</button>`; }
+                card.innerHTML = `<div class="flex-grow cursor-pointer" data-action="open-status"><div class="flex justify-between items-start"><h3 class="text-xl font-bold text-gray-900">Território ${t.id}</h3><span class="status-badge text-xs font-semibold ${p.textColorClass} ${p.bgColorClass} px-2 py-1 rounded-full">${p.statusText}</span></div><p class="text-sm text-gray-500 mt-1">${p.completedCount} de ${p.totalCount} quadras</p><div class="w-full bg-gray-200 rounded-full h-2.5 mt-4"><div class="${p.statusColorClass} h-2.5 rounded-full" style="width: ${p.progress}%"></div></div></div>${actionButton}`;
+                return card;
+            },
+            getTerritoryProgress(id) {
+                const status = this.state.status[id] || {}; 
+                const totalCount = this.data.find(t => t.id === id)?.blocks.length || 0;
+                const completedCount = Object.values(status).filter(Boolean).length;
+                const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+                let s = { text: 'Pendente', color: 'bg-red-500', textC: 'text-red-800', bgC: 'bg-red-100' };
+                if (progress === 100) { s = { text: 'Concluído', color: 'bg-green-500', textC: 'text-green-800', bgC: 'bg-green-100' }; }
+                else if (progress > 0) { s = { text: 'Em Andamento', color: 'bg-yellow-500', textC: 'text-yellow-800', bgC: 'bg-yellow-100' }; }
+                return { completedCount, totalCount, progress, statusText: s.text, statusColorClass: s.color, textColorClass: s.textC, bgColorClass: s.bgC };
+            },
+            renderAssignmentCards() {
+                this.ui.weekdayContainer.innerHTML = '';
+                for (const [day, person] of Object.entries(this.state.config.weekday || {})) { this.ui.weekdayContainer.appendChild(this.createAssignmentCard(day, person, this.state.weekdaySelections[day] || [])); }
+                this.ui.weekendContainer.innerHTML = '';
+                for (const [key, name] of Object.entries(this.state.config.weekend || {})) {
+                    if (key === 'DOMINGO') { this.ui.weekendContainer.appendChild(this.createSundayCard()); }
+                    else { this.ui.weekendContainer.appendChild(this.createAssignmentCard(key, name, this.state.weekendSelections[key] || [])); }
+                }
+            },
+            createAssignmentCard(key, title, selections) {
+                const card = document.createElement('div'); card.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col';
+                card.innerHTML = `<div><h3 class="font-bold text-lg text-gray-800">${key.startsWith('SABADO') ? 'SÁBADO' : key}</h3><p class="text-sm text-gray-600 mb-3">${title}</p></div><div class="flex-grow min-h-[60px] bg-white border rounded-md p-1 flex flex-wrap gap-1" id="badges-${key}"></div><button class="add-territory-btn mt-3 w-full bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200" data-key="${key}">Adicionar</button>`;
+                const badgeContainer = card.querySelector(`#badges-${key}`);
+                if (selections.length === 0) { badgeContainer.innerHTML = `<span class="text-xs text-gray-400 p-2">Nenhum</span>`; }
+                else { selections.forEach(id => { badgeContainer.innerHTML += `<span class="selection-badge">T-${id} <button data-key="${key}" data-id="${id}">&times;</button></span>`; }); }
+                return card;
+            },
+            createSundayCard() {
+                const key = 'DOMINGO'; const card = document.createElement('div'); card.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col';
+                const publicadores = s13App.state.publicadores || [];
+                let optionsHTML = '<option value="">Selecione um responsável</option>';
+                const sundaySelection = this.state.weekendSelections.DOMINGO || { name: '', territories: [] };
+                publicadores.forEach(nome => {
+                    const isSelected = sundaySelection.name === nome ? 'selected' : '';
+                    optionsHTML += `<option value="${nome}" ${isSelected}>${nome}</option>`;
+                });
+                card.innerHTML = `<div><h3 class="font-bold text-lg text-gray-800">DOMINGO</h3><select id="sunday-name-select" class="w-full p-2 border border-gray-300 rounded-md mt-1 mb-3 bg-white">${optionsHTML}</select></div><div class="flex-grow min-h-[60px] bg-white border rounded-md p-1 flex flex-wrap gap-1" id="badges-${key}"></div><button class="add-territory-btn mt-3 w-full bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200" data-key="${key}">Adicionar</button>`;
+                const badgeContainer = card.querySelector(`#badges-${key}`); const selections = sundaySelection.territories;
+                if (selections.length === 0) { badgeContainer.innerHTML = `<span class="text-xs text-gray-400 p-2">Nenhum</span>`; }
+                else { selections.forEach(id => { badgeContainer.innerHTML += `<span class="selection-badge">${typeof id === 'number' ? 'T-' : ''}${id} <button data-key="${key}" data-id="${id}">&times;</button></span>`; }); }
+                return card;
+            },
+            getAssignmentStartDate(baseDate = this.state.selectedDate) {
+                const date = new Date(baseDate);
+                if (this.state.mode === 'weekday') {
+                    const dayOfWeek = date.getDay(); 
+                    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                    return new Date(date.setDate(date.getDate() + diffToMonday));
+                } else {
+                    const dayOfWeek = date.getDay();
+                    const diffToSaturday = dayOfWeek === 0 ? -1 : 6 - dayOfWeek;
+                    return new Date(date.setDate(date.getDate() + diffToSaturday));
+                }
+            },
+            updateDateDisplay() {
+                const format = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const startDate = this.getAssignmentStartDate();
+                if (this.state.mode === 'weekday') {
+                    const endDate = new Date(new Date(startDate).setDate(startDate.getDate() + 4));
+                    this.ui.weekDates.textContent = `Programação para a semana de ${format(startDate)} a ${format(endDate)}`;
+                } else {
+                    const endDate = new Date(new Date(startDate).setDate(startDate.getDate() + 1));
+                    this.ui.weekDates.textContent = `Programação para o final de semana de ${format(startDate)} e ${format(endDate)}`;
+                }
+            },
+            setMode(mode, doSave = true) {
+                this.state.mode = mode; const isWeekday = mode === 'weekday';
+                this.ui.modeWeekdayBtn.classList.toggle('mode-btn-active', isWeekday); this.ui.modeWeekdayBtn.classList.toggle('mode-btn-inactive', !isWeekday);
+                this.ui.modeWeekendBtn.classList.toggle('mode-btn-active', !isWeekday); this.ui.modeWeekendBtn.classList.toggle('mode-btn-inactive', isWeekday);
+                this.ui.weekdayContainer.classList.toggle('hidden', !isWeekday); this.ui.weekendContainer.classList.toggle('hidden', isWeekday);
+                this.updateDateDisplay(); 
+                if (doSave) this.saveState();
+            },
+            openStatusModal(id) {
+                const t = this.data.find(td => td.id === id); const modal = this.ui.statusModal;
+                modal.querySelector('#status-modal-title').textContent = `Território ${t.id}`; modal.dataset.currentTerritoryId = id;
+                const container = modal.querySelector('#status-modal-blocks-container');
+                container.innerHTML = `<div class="flex items-center justify-between bg-gray-200 p-3 rounded-lg border-b-2 border-gray-300 mb-3"><label for="select-all-blocks" class="font-bold text-gray-700">Marcar Todas</label><input type="checkbox" id="select-all-blocks" class="h-6 w-6 rounded text-blue-600"></div>`;
+                const wrapper = document.createElement('div'); wrapper.className = 'space-y-3'; let allChecked = true;
+                t.blocks.forEach(block => {
+                    const isChecked = this.state.status[id] && this.state.status[id][block]; if (!isChecked) allChecked = false;
+                    wrapper.innerHTML += `<div class="flex items-center justify-between bg-gray-100 p-3 rounded-lg"><label for="block-${block}" class="font-medium">Quadra ${block}</label><input type="checkbox" id="block-${block}" ${isChecked ? 'checked' : ''} class="h-6 w-6 block-checkbox" data-block="${block}"></div>`;
+                });
+                container.appendChild(wrapper); container.querySelector('#select-all-blocks').checked = allChecked; modal.classList.remove('hidden');
+            },
+            openSelectionModal(key) {
+                const modal = this.ui.selectionModal; modal.dataset.currentKey = key;
+                modal.querySelector('#selection-modal-title').textContent = `Selecionar para ${key}`;
+                const container = modal.querySelector('#selection-modal-body'); container.innerHTML = '';
+                const allSelections = Object.values(this.state.weekdaySelections).flat().concat(Object.values(this.state.weekendSelections).map(v => Array.isArray(v) ? v : (v.territories || [])).flat());
+                let currentSelections = [];
+                if (this.state.mode === 'weekday') currentSelections = this.state.weekdaySelections[key] || [];
+                else currentSelections = key === 'DOMINGO' ? (this.state.weekendSelections[key] || {territories:[]}).territories : (this.state.weekendSelections[key] || []);
+                const available = this.data.filter(t => !this.state.archived.includes(t.id));
+                available.forEach(t => {
+                    const isSelectedElsewhere = allSelections.includes(t.id) && !currentSelections.includes(t.id);
+                    const isSelectedHere = currentSelections.includes(t.id);
+                    container.innerHTML += `<label class="flex items-center p-3 rounded-lg ${isSelectedElsewhere ? 'bg-gray-200 cursor-not-allowed text-gray-400' : 'bg-gray-100 hover:bg-gray-200 cursor-pointer'}"><input type="checkbox" value="${t.id}" ${isSelectedHere ? 'checked' : ''} ${isSelectedElsewhere ? 'disabled' : ''} class="h-5 w-5"><span class="ml-3 font-medium">Território ${t.id}</span></label>`;
+                });
+                if (key === 'DOMINGO') {
+                    container.innerHTML += `<h3 class="col-span-full font-bold text-lg mt-4 border-t pt-4">Territórios Rurais</h3>`;
+                    this.state.config.rural.forEach(r => {
+                        const isSelectedElsewhere = allSelections.includes(r) && !currentSelections.includes(r);
+                        const isSelectedHere = currentSelections.includes(r);
+                        container.innerHTML += `<label class="flex items-center p-3 rounded-lg ${isSelectedElsewhere ? 'bg-gray-200 cursor-not-allowed text-gray-400' : 'bg-gray-100 hover:bg-gray-200 cursor-pointer'}"><input type="checkbox" value="${r}" ${isSelectedHere ? 'checked' : ''} ${isSelectedElsewhere ? 'disabled' : ''} class="h-5 w-5"><span class="ml-3 font-medium">${r}</span></label>`;
+                    });
+                }
+                modal.classList.remove('hidden');
+            },
+            openSettingsModal() {
+                this.ui.weekdaySettingsContainer.innerHTML = '';
+                this.ui.weekendSettingsContainer.innerHTML = '';
+                for (const [key, value] of Object.entries(this.state.config.weekday)) {
+                    this.ui.weekdaySettingsContainer.innerHTML += `<div><label for="setting-${key}" class="block text-sm font-medium text-gray-700">${key}</label><input type="text" id="setting-${key}" data-key="${key}" data-type="weekday" value="${value}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>`;
+                }
+                for (const [key, value] of Object.entries(this.state.config.weekend)) {
+                    if (key !== 'DOMINGO') {
+                        this.ui.weekendSettingsContainer.innerHTML += `<div><label for="setting-${key}" class="block text-sm font-medium text-gray-700">${key.replace('-', ' ')}</label><input type="text" id="setting-${key}" data-key="${key}" data-type="weekend" value="${value}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>`;
+                    }
+                }
+                this.ui.settingsModal.classList.remove('hidden');
+            },
+            async saveSettings(e) {
+                e.preventDefault();
+                const newConfig = { weekday: {}, weekend: {} };
+                const inputs = this.ui.settingsForm.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => {
+                    const { key, type } = input.dataset;
+                    newConfig[type][key] = input.value;
+                });
+                try {
+                    await setDoc(doc(db, "appState", "assignmentsConfig"), newConfig, { merge: true });
+                    console.log("Configurações salvas com sucesso!");
+                    this.ui.settingsModal.classList.add('hidden');
+                } catch (error) {
+                    console.error("Erro ao salvar configurações:", error);
+                    alert("Falha ao salvar as configurações.");
+                }
+            },
+            openHistoryModal() {
+                this.renderHistory();
+                this.ui.historyModal.classList.remove('hidden');
+            },
+            renderHistory() {
+                this.ui.historyContainer.innerHTML = '';
+                if (this.state.history.length === 0) {
+                    this.ui.historyContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhum histórico de designação encontrado.</p>';
+                    return;
+                }
+                this.state.history.forEach(entry => {
+                    const timestamp = entry.timestamp?.toDate();
+                    const formattedDate = timestamp ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeStyle: 'medium' }).format(timestamp) : 'Data indisponível';
+                    const historyElement = document.createElement('div');
+                    historyElement.className = 'p-4 border rounded-lg bg-gray-50';
+                    historyElement.innerHTML = `
+                        <p class="font-semibold text-gray-800">${entry.periodText}</p>
+                        <p class="text-sm text-gray-500 mb-2">${formattedDate}</p>
+                        <pre class="whitespace-pre-wrap text-sm bg-white p-2 rounded border text-gray-700">${entry.message}</pre>
+                    `;
+                    this.ui.historyContainer.appendChild(historyElement);
+                });
+            },
+            closeAllModals() { this.ui.statusModal.classList.add('hidden'); this.ui.selectionModal.classList.add('hidden'); this.ui.settingsModal.classList.add('hidden'); this.ui.historyModal.classList.add('hidden');},
+            setupWeekPicker() {
+                const today = new Date();
+                this.ui.weekPicker.value = today.toISOString().split('T')[0];
+                this.ui.weekPicker.addEventListener('change', (e) => {
+                    this.state.selectedDate = new Date(e.target.value + 'T00:00:00');
+                    this.updateDateDisplay();
+                });
+            },
+            setupEventListeners() {
+                this.ui.modeWeekdayBtn.addEventListener('click', () => this.setMode('weekday'));
+                this.ui.modeWeekendBtn.addEventListener('click', () => this.setMode('weekend'));
+                this.ui.openSettingsBtn.addEventListener('click', () => this.openSettingsModal());
+                this.ui.closeSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
+                this.ui.cancelSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
+                this.ui.settingsForm.addEventListener('submit', (e) => this.saveSettings(e));
+                this.ui.settingsModal.addEventListener('click', (e) => { if (e.target === this.ui.settingsModal) this.ui.settingsModal.classList.add('hidden'); });
+                this.ui.openHistoryBtn.addEventListener('click', () => this.openHistoryModal());
+                this.ui.closeHistoryBtn.addEventListener('click', () => this.ui.historyModal.classList.add('hidden'));
+                this.ui.historyModal.addEventListener('click', (e) => { if (e.target === this.ui.historyModal) this.ui.historyModal.classList.add('hidden'); });
+
+                document.body.addEventListener('click', (e) => {
+                    const territoryCard = e.target.closest('.territory-card');
+                    if (territoryCard) {
+                        const id = parseInt(territoryCard.dataset.territoryId);
+                        if (e.target.closest('[data-action="open-status"]')) this.openStatusModal(id);
+                        else if (e.target.classList.contains('archive-btn')) { if (!this.state.archived.includes(id)) this.state.archived.push(id); this.saveState(); }
+                        else if (e.target.classList.contains('restore-btn')) { this.state.archived = this.state.archived.filter(i => i !== id); this.saveState(); }
+                    }
+                    if (e.target.classList.contains('add-territory-btn')) this.openSelectionModal(e.target.dataset.key);
+                    if (e.target.parentElement?.classList.contains('selection-badge')) {
+                        const { key, id } = e.target.dataset;
+                        const idValue = isNaN(parseInt(id)) ? id : parseInt(id);
+                        if (this.state.mode === 'weekday') this.state.weekdaySelections[key] = this.state.weekdaySelections[key].filter(i => i != idValue);
+                        else if (key === 'DOMINGO') this.state.weekendSelections[key].territories = this.state.weekendSelections[key].territories.filter(i => i != idValue);
+                        else this.state.weekendSelections[key] = this.state.weekendSelections[key].filter(i => i != idValue);
+                        this.saveState();
+                    }
+                });
+                document.body.addEventListener('input', (e) => { if (e.target.id === 'sunday-name-select') { this.state.weekendSelections.DOMINGO.name = e.target.value; this.saveState(); } });
+                this.ui.toggleArchivedBtn.addEventListener('click', () => {
+                    this.state.showArchived = !this.state.showArchived;
+                    this.ui.toggleArchivedBtn.textContent = this.state.showArchived ? 'Mostrar Ativos' : 'Mostrar Arquivados';
+                    this.ui.gridTitle.textContent = this.state.showArchived ? 'Territórios Arquivados' : 'Territórios Ativos';
+                    this.renderGrid();
+                });
+                this.ui.statusModal.addEventListener('change', (e) => {
+                    const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
+                    const progressBefore = this.getTerritoryProgress(id).progress;
+                    if (!this.state.status[id]) this.state.status[id] = {};
+                    const cbs = this.ui.statusModal.querySelectorAll('.block-checkbox');
+                    if (e.target.id === 'select-all-blocks') { cbs.forEach(cb => { cb.checked = e.target.checked; this.state.status[id][cb.dataset.block] = e.target.checked; }); }
+                    else { this.state.status[id][e.target.dataset.block] = e.target.checked; this.ui.statusModal.querySelector('#select-all-blocks').checked = Array.from(cbs).every(cb => cb.checked); }
+                    const progressAfter = this.getTerritoryProgress(id).progress;
+                    if (progressBefore < 100 && progressAfter === 100) { this.triggerS13Update(id); }
+                    this.saveState();
+                });
+                this.ui.selectionModal.querySelector('#confirm-selection-btn').addEventListener('click', () => {
+                    const key = this.ui.selectionModal.dataset.currentKey;
+                    const ids = Array.from(this.ui.selectionModal.querySelectorAll('input:checked')).map(cb => isNaN(parseInt(cb.value)) ? cb.value : parseInt(cb.value));
+                    if (this.state.mode === 'weekday') this.state.weekdaySelections[key] = ids;
+                    else if (key === 'DOMINGO') this.state.weekendSelections[key].territories = ids;
+                    else this.state.weekendSelections[key] = ids;
+                    this.saveState(); this.closeAllModals();
+                });
+                this.ui.generateMessageBtn.addEventListener('click', () => this.generateMessage());
+                this.ui.copyMessageBtn.addEventListener('click', () => {
+                    this.ui.whatsappMessage.select(); document.execCommand('copy');
+                    this.ui.copySuccess.classList.remove('hidden'); setTimeout(() => this.ui.copySuccess.classList.add('hidden'), 2000);
+                });
+                [this.ui.statusModal, this.ui.selectionModal, this.ui.settingsModal, this.ui.historyModal].forEach(m => {
+                    m.addEventListener('click', (e) => { if (e.target === m) this.closeAllModals(); });
+                    m.querySelector('[id^="close-"]').addEventListener('click', () => this.closeAllModals());
+                });
+                this.ui.statusModal.querySelector('#save-status-btn').addEventListener('click', () => { this.closeAllModals(); this.renderGrid(); });
+                this.ui.resetTerritoriesBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Territórios', 'Tem certeza que deseja zerar todos os territórios? Esta ação irá restaurar os arquivados e marcar todas as quadras como pendentes.', () => this.resetTerritories()));
+            },
+            async resetTerritories() {
+                this.data.forEach(t => { this.state.status[t.id] = {}; t.blocks.forEach(b => { this.state.status[t.id][b] = false; }); });
+                this.state.archived = [];
+                this.state.assignmentLog = {};
+                Object.keys(this.state.weekdaySelections).forEach(k => this.state.weekdaySelections[k] = []);
+                Object.keys(this.state.weekendSelections).forEach(k => {
+                    if(k === 'DOMINGO') this.state.weekendSelections[k] = { name: '', territories: [] };
+                    else this.state.weekendSelections[k] = [];
+                });
+                await this.saveState();
+            },
+            triggerS13Update(territoryId) {
+                const assignment = this.state.assignmentLog[territoryId];
+                if (!assignment) return; 
+                let name = assignment.name;
+                if (this.state.config.weekendGroupNames[name]) { name = this.state.config.weekendGroupNames[name]; }
+                const startDate = assignment.date;
+                const endDate = new Date().toISOString().split('T')[0];
+                s13App.addRecordAutomated(territoryId, name, startDate, endDate);
+                delete this.state.assignmentLog[territoryId];
+                this.saveState();
+            },
+            async generateMessage() {
+                this.updateDateDisplay();
+                const startDate = this.getAssignmentStartDate();
+                const dateText = this.ui.weekDates.textContent.split('para ')[1];
+                let message = `Bom dia irmãos, espero que todos estejam bem!\n\nSegue a programação de território referente a ${dateText}.\n\n`;
+                let hasAssignments = false;
+                const getTerritoryLine = (id) => {
+                    if (typeof id !== 'number') return id;
+                    const t = this.data.find(td => td.id == id);
+                    const allBlocks = t.blocks; const pendingBlocks = allBlocks.filter(b => !(this.state.status[id] && this.state.status[id][b]));
+                    if (pendingBlocks.length === 0) return `${id} (Completo)`;
+                    if (pendingBlocks.length < allBlocks.length) return `${id} (${pendingBlocks.join(', ')})`;
+                    return `${id}`;
+                };
+                if (this.state.mode === 'weekday') {
+                    for (const [day, person] of Object.entries(this.state.config.weekday)) {
+                        const selections = this.state.weekdaySelections[day];
+                        if (selections && selections.length > 0) {
+                            hasAssignments = true;
+                            selections.forEach(id => { this.state.assignmentLog[id] = { name: person, date: startDate.toISOString().split('T')[0] }; });
+                            const territoryNumbers = selections.map(getTerritoryLine).join(', ');
+                            message += `${day.toUpperCase()} - @${person}\nTERRITÓRIO: ${territoryNumbers}\n\n`;
+                        }
+                    }
+                } else {
+                    let saturdayAssignments = [];
+                    for (const [key, title] of Object.entries(this.state.config.weekend)) {
+                        if (key.startsWith('SABADO')) {
+                            const selections = this.state.weekendSelections[key];
+                            if (selections && selections.length > 0) {
+                                hasAssignments = true;
+                                selections.forEach(id => { this.state.assignmentLog[id] = { name: key, date: startDate.toISOString().split('T')[0] }; });
+                                const territoryNumbers = selections.map(getTerritoryLine).join(', ');
+                                saturdayAssignments.push(`${title.toUpperCase()}\nTERRITÓRIO: ${territoryNumbers}`);
+                            }
+                        }
+                    }
+                    if (saturdayAssignments.length > 0) { message += 'SÁBADO:\n' + saturdayAssignments.join('\n\n') + '\n\n'; }
+                    const sundaySelections = this.state.weekendSelections.DOMINGO;
+                    if (sundaySelections && sundaySelections.territories.length > 0) {
+                        hasAssignments = true;
+                        const sundayName = sundaySelections.name.trim();
+                        sundaySelections.territories.forEach(id => { this.state.assignmentLog[id] = { name: sundayName, date: new Date(new Date(startDate).setDate(startDate.getDate() + 1)).toISOString().split('T')[0] }; });
+                        const territoryNumbers = sundaySelections.territories.map(getTerritoryLine).join(', ');
+                        message += `DOMINGO - @${sundayName || 'Responsável'}\nTERRITÓRIO: ${territoryNumbers}\n\n`;
+                    }
+                }
+                if (!hasAssignments) { 
+                    message = "Por favor, designe pelo menos um território para gerar a mensagem."; 
+                } else { 
+                    message += "Por favor irmãos, não esqueçam de nos avisar aqui no grupo, quais territórios foram finalizados."; 
+                    this.saveState();
+                    // Salva a designação no histórico
+                    try {
+                        await addDoc(collection(db, "assignmentHistory"), {
+                            timestamp: serverTimestamp(),
+                            periodText: `Designação para ${dateText}`,
+                            message: message
+                        });
+                        console.log("Designação salva no histórico.");
+                    } catch (error) {
+                        console.error("Erro ao salvar no histórico:", error);
+                    }
+                }
+                this.ui.whatsappMessage.value = message;
+                const encodedMessage = encodeURIComponent(message);
+                this.ui.sendWhatsappLink.href = `https://wa.me/?text=${encodedMessage}`;
+                this.ui.messageOutputContainer.classList.remove('hidden');
+            }
+        };
+
+        // =================================================================
+        // REGISTRO DE TERRITÓRIOS S-13 - LÓGICA
+        // =================================================================
+        const s13App = {
+            config: { numTerritories: 46, numDesignations: 4 },
+            state: { publicadores: [], s13Data: {}, currentPage: 0 },
+            ui: {
+                form: document.getElementById('s13-registro-form'),
+                territorioNumeroInput: document.getElementById('s13-territorio-numero'),
+                nomeSelect: document.getElementById('s13-nome-select'),
+                dataInicioInput: document.getElementById('s13-data-inicio'),
+                dataConclusaoInput: document.getElementById('s13-data-conclusao'),
+                planilhaCorpo: document.getElementById('s13-planilha-corpo'),
+                baixarBtn: document.getElementById('s13-baixar-excel'),
+                openModalBtn: document.getElementById('open-names-modal-btn'),
+                namesModal: document.getElementById('s13-names-modal'),
+                closeModalBtn: document.getElementById('s13-close-modal-btn'),
+                addNameForm: document.getElementById('s13-add-name-form'),
+                novoNomeInput: document.getElementById('s13-novo-nome-input'),
+                listaPublicadores: document.getElementById('s13-lista-publicadores'),
+                addRecordModal: document.getElementById('s13-add-record-modal'),
+                openAddRecordModalBtn: document.getElementById('open-add-record-modal-btn'),
+                closeAddRecordModalBtn: document.getElementById('s13-close-add-record-modal-btn'),
+                resetBtn: document.getElementById('s13-reset-btn'),
+                paginationControls: document.getElementById('s13-pagination-controls')
+            },
+
+            initialize() {
+                this.listenForRealtimeUpdates();
+                this.setupEventListeners();
+            },
+            
+            listenForRealtimeUpdates() {
+                onSnapshot(doc(db, "appState", "s13Data"), (docSnapshot) => {
+                    console.log("Recebida atualização do 's13Data'");
+                    const s13Data = docSnapshot.exists() ? docSnapshot.data() : {};
+                    this.state.s13Data = s13Data.data || {};
+                    this.renderTable(this.state.currentPage);
+                });
+
+                onSnapshot(doc(db, "appState", "publishers"), (docSnapshot) => {
+                    console.log("Recebida atualização dos 'publishers'");
+                    const publishers = docSnapshot.exists() ? docSnapshot.data() : {};
+                    this.state.publicadores = publishers.names || [];
+                    this.renderNames();
+                    window.dispatchEvent(new Event('publicadoresAtualizados'));
+                });
+            },
+
+            async saveState() {
+                try {
+                    await setDoc(doc(db, "appState", "s13Data"), { data: this.state.s13Data });
+                    await setDoc(doc(db, "appState", "publishers"), { names: this.state.publicadores });
+                    console.log("Dados do S-13 salvos no Firestore!");
+                } catch(error) {
+                    console.error("Erro ao salvar dados do S-13:", error);
+                }
+            },
+            renderNames() {
+                this.ui.nomeSelect.innerHTML = '<option value="">Selecione um nome</option>';
+                this.ui.listaPublicadores.innerHTML = '';
+                this.state.publicadores.forEach((nome, index) => {
+                    const option = document.createElement('option'); option.value = nome; option.textContent = nome;
+                    this.ui.nomeSelect.appendChild(option);
+                    const li = document.createElement('li'); li.textContent = nome;
+                    const deleteBtn = document.createElement('button'); deleteBtn.textContent = 'X'; deleteBtn.className = 's13-delete-btn';
+                    deleteBtn.title = 'Remover nome'; deleteBtn.dataset.index = index;
+                    li.appendChild(deleteBtn); this.ui.listaPublicadores.appendChild(li);
+                });
+            },
+            addName(e) {
+                e.preventDefault();
+                const novoNome = this.ui.novoNomeInput.value.trim();
+                if (novoNome && !this.state.publicadores.includes(novoNome)) {
+                    this.state.publicadores.push(novoNome); this.state.publicadores.sort();
+                    this.saveState(); this.ui.novoNomeInput.value = '';
+                } else if (this.state.publicadores.includes(novoNome)) { alert('Este nome já está cadastrado.'); }
+            },
+            deleteName(e) {
+                if (e.target.classList.contains('s13-delete-btn')) {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    const nomeRemovido = this.state.publicadores[index];
+                    mainNav.showConfirmationModal('Remover Nome', `Tem certeza que deseja remover "${nomeRemovido}"?`, () => {
+                        this.state.publicadores.splice(index, 1);
+                        this.saveState();
+                    });
+                }
+            },
+            getMaxPages() {
+                let maxPages = 1;
+                for (const territoryId in this.state.s13Data) {
+                    const pages = this.state.s13Data[territoryId].length;
+                    if (pages > maxPages) maxPages = pages;
+                }
+                return maxPages;
+            },
+            renderPagination() {
+                const maxPages = this.getMaxPages();
+                this.ui.paginationControls.innerHTML = '';
+                if (maxPages <= 1) return;
+                this.ui.paginationControls.innerHTML = `
+                    <button id="s13-prev-page" class="px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50" ${this.state.currentPage === 0 ? 'disabled' : ''}>Anterior</button>
+                    <span class="font-semibold">Página ${this.state.currentPage + 1} de ${maxPages}</span>
+                    <button id="s13-next-page" class="px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50" ${this.state.currentPage >= maxPages - 1 ? 'disabled' : ''}>Próxima</button>
+                `;
+            },
+            renderTable(pageIndex = 0) {
+                this.state.currentPage = pageIndex;
+                let html = '';
+                for (let i = 1; i <= this.config.numTerritories; i++) {
+                    const rowClass = i % 2 === 0 ? 'row-even' : 'row-odd';
+                    const territoryPages = this.state.s13Data[i] || [];
+                    const pageData = territoryPages[pageIndex] || [];
+                    html += `<tr id="s13-row-${i}-names" class="${rowClass}"><td rowspan="2">${i}</td><td rowspan="2" id="s13-t${i}-last-date"></td>`;
+                    for (let j = 0; j < this.config.numDesignations; j++) {
+                        const record = pageData[j];
+                        html += `<td colspan="2" id="s13-t${i}-name-${j}" class="name-cell">${record ? record.name : ''}</td>`;
+                    }
+                    html += `</tr><tr id="s13-row-${i}-dates" class="${rowClass}">`;
+                    for (let j = 0; j < this.config.numDesignations; j++) {
+                         const record = pageData[j];
+                        html += `<td id="s13-t${i}-start-${j}">${record ? this.formatDate(record.start) : ''}</td><td id="s13-t${i}-end-${j}">${record ? this.formatDate(record.end) : ''}</td>`;
+                    }
+                    html += `</tr>`;
+                    const lastRecord = territoryPages.flat().slice(-1)[0];
+                    if(lastRecord) {
+                       setTimeout(() => {
+                            const lastDateCell = document.getElementById(`s13-t${i}-last-date`);
+                            if(lastDateCell) lastDateCell.innerHTML = this.formatDate(lastRecord.end);
+                       }, 0);
+                    }
+                }
+                this.ui.planilhaCorpo.innerHTML = html;
+                this.renderPagination();
+            },
+            formatDate(dataStr) { if (!dataStr) return ''; const [y, m, d] = dataStr.split('T')[0].split('-'); return `${d}/${m}/${y.slice(-2)}`; },
+            _addRecord(territoryId, name, start, end) {
+                if (!this.state.s13Data[territoryId]) {
+                    this.state.s13Data[territoryId] = [[]];
+                }
+                let lastPage = this.state.s13Data[territoryId][this.state.s13Data[territoryId].length - 1];
+                if (lastPage.length >= this.config.numDesignations) {
+                    this.state.s13Data[territoryId].push([]);
+                    lastPage = this.state.s13Data[territoryId][this.state.s13Data[territoryId].length - 1];
+                }
+                lastPage.push({ name, start, end });
+                this.saveState();
+                this.renderTable(this.state.s13Data[territoryId].length - 1);
+            },
+            addRecordAutomated(territoryId, name, start, end) { this._addRecord(territoryId, name, start, end); },
+            addRecordFromModal() {
+                const num = this.ui.territorioNumeroInput.value; const nome = this.ui.nomeSelect.value;
+                const start = this.ui.dataInicioInput.value; const end = this.ui.dataConclusaoInput.value;
+                if (!num || !nome || !start || !end) { alert('Por favor, preencha todos os campos.'); return; }
+                if (new Date(end) < new Date(start)) { alert('A data de conclusão não pode ser anterior à de designação.'); return; }
+                this._addRecord(num, nome, start, end);
+                this.ui.form.reset(); this.ui.addRecordModal.classList.add('hidden');
+            },
+            async exportToExcel() {
+                const maxPages = this.getMaxPages();
+                const workbook = XLSX.utils.book_new();
+                const originalPage = this.state.currentPage;
+                for (let i = 0; i < maxPages; i++) {
+                    this.renderTable(i);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    const tableClone = document.getElementById('s13-planilha').cloneNode(true);
+                    const worksheet = XLSX.utils.table_to_sheet(tableClone);
+                    XLSX.utils.book_append_sheet(workbook, worksheet, `Planilha ${i + 1}`);
+                }
+                this.renderTable(originalPage);
+                XLSX.writeFile(workbook, "REGISTRO_DE_TERRITORIO_S13.xlsx");
+            },
+            async resetS13Data() {
+                this.state.s13Data = {};
+                await this.saveState();
+            },
+            setupEventListeners() {
+                this.ui.form.addEventListener('submit', (e) => { e.preventDefault(); this.addRecordFromModal(); });
+                this.ui.addNameForm.addEventListener('submit', (e) => this.addName(e));
+                this.ui.listaPublicadores.addEventListener('click', (e) => this.deleteName(e));
+                this.ui.baixarBtn.addEventListener('click', () => this.exportToExcel());
+                this.ui.openModalBtn.addEventListener('click', () => this.ui.namesModal.classList.remove('hidden'));
+                this.ui.closeModalBtn.addEventListener('click', () => this.ui.namesModal.classList.add('hidden'));
+                this.ui.namesModal.addEventListener('click', (e) => { if (e.target === this.ui.namesModal) this.ui.namesModal.classList.add('hidden'); });
+                this.ui.openAddRecordModalBtn.addEventListener('click', () => this.ui.addRecordModal.classList.remove('hidden'));
+                this.ui.closeAddRecordModalBtn.addEventListener('click', () => this.ui.addRecordModal.classList.add('hidden'));
+                this.ui.addRecordModal.addEventListener('click', (e) => { if (e.target === this.ui.addRecordModal) this.ui.addRecordModal.classList.add('hidden'); });
+                this.ui.resetBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Planilha S-13', 'Tem certeza que deseja apagar todos os dados da planilha S-13? Esta ação não pode ser desfeita.', () => this.resetS13Data()));
+                this.ui.paginationControls.addEventListener('click', (e) => {
+                    if (e.target.id === 's13-prev-page') this.renderTable(this.state.currentPage - 1);
+                    else if (e.target.id === 's13-next-page') this.renderTable(this.state.currentPage + 1);
+                });
+            }
+        };
+
+        // =================================================================
+        // NAVEGAÇÃO PRINCIPAL E MODAL DE CONFIRMAÇÃO
+        // =================================================================
+        const mainNav = {
+            navButton: document.getElementById('nav-button'),
+            navTitle: document.getElementById('nav-title'),
+            mainView: document.getElementById('territory-manager-view'),
+            s13View: document.getElementById('s13-view'),
+            confirmationModal: document.getElementById('confirmation-modal'),
+            confirmBtn: document.getElementById('confirm-action-btn'),
+            cancelBtn: document.getElementById('cancel-action-btn'),
+            currentView: 'main',
+            onConfirmCallback: null,
+            initialize() {
+                this.setupEventListeners();
+                window.addEventListener('publicadoresAtualizados', () => {
+                    territoryManager.renderAssignmentCards();
+                });
+            },
+            showView(viewName) {
+                if (viewName === 's13') {
+                    this.mainView.classList.add('hidden');
+                    this.s13View.classList.remove('hidden');
+                    this.navButton.textContent = 'Voltar ao Painel';
+                    this.navTitle.textContent = 'Registro S-13';
+                    this.currentView = 's13';
+                    s13App.renderTable(s13App.state.currentPage);
+                } else {
+                    this.s13View.classList.add('hidden');
+                    this.mainView.classList.remove('hidden');
+                    this.navButton.textContent = 'S-13';
+                    this.navTitle.textContent = 'Painel Principal';
+                    this.currentView = 'main';
+                }
+            },
+            showConfirmationModal(title, message, onConfirm) {
+                this.confirmationModal.querySelector('#confirmation-title').textContent = title;
+                this.confirmationModal.querySelector('#confirmation-message').textContent = message;
+                this.onConfirmCallback = onConfirm;
+                this.confirmationModal.classList.remove('hidden');
+            },
+            setupEventListeners() {
+                this.navButton.addEventListener('click', () => {
+                    this.showView(this.currentView === 'main' ? 's13' : 'main');
+                });
+                this.cancelBtn.addEventListener('click', () => this.confirmationModal.classList.add('hidden'));
+                this.confirmBtn.addEventListener('click', () => {
+                    if (this.onConfirmCallback) this.onConfirmCallback();
+                    this.confirmationModal.classList.add('hidden');
+                });
+            }
+        };
+
+        // INICIALIZAÇÃO DE TODAS AS PARTES DA APLICAÇÃO
+        territoryManager.initialize();
+        s13App.initialize();
+        mainNav.initialize();
+    });
+    </script>
+
+</body>
+</html>
