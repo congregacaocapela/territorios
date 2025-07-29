@@ -246,11 +246,22 @@
             </div>
         </div>
     </div>
+     <!-- Custom Alert Modal -->
+    <div id="custom-alert-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm text-center">
+            <h2 id="custom-alert-title" class="text-xl font-bold mb-4">Aviso</h2>
+            <p id="custom-alert-message" class="mb-6"></p>
+            <div class="flex justify-center">
+                <button id="custom-alert-ok-btn" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-blue-700">OK</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- SCRIPT DE INICIALIZAÇÃO DO FIREBASE (MODULAR) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDyK9M4Fg-iU9IVrNqWmuvDJExhnSnyrbI",
@@ -265,14 +276,27 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        document.dispatchEvent(new CustomEvent('firebaseReady', { detail: { db, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } }));
+        document.dispatchEvent(new CustomEvent('firebaseReady', { detail: { db, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp, runTransaction, updateDoc } }));
     </script>
 
 
     <!-- SCRIPT PRINCIPAL DA APLICAÇÃO -->
     <script>
     document.addEventListener('firebaseReady', ({ detail }) => {
-        const { db, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp } = detail;
+        const { db, collection, doc, setDoc, onSnapshot, addDoc, query, orderBy, limit, serverTimestamp, runTransaction, updateDoc } = detail;
+
+        // =================================================================
+        // Custom Alert Function
+        // =================================================================
+        const customAlert = (message) => {
+            const modal = document.getElementById('custom-alert-modal');
+            document.getElementById('custom-alert-message').textContent = message;
+            modal.classList.remove('hidden');
+        };
+        document.getElementById('custom-alert-ok-btn').addEventListener('click', () => {
+            document.getElementById('custom-alert-modal').classList.add('hidden');
+        });
+
 
         // =================================================================
         // PAINEL DE CONTROLE DE TERRITÓRIOS - LÓGICA
@@ -549,7 +573,7 @@
                     this.ui.settingsModal.classList.add('hidden');
                 } catch (error) {
                     console.error("Erro ao salvar configurações:", error);
-                    alert("Falha ao salvar as configurações.");
+                    customAlert("Falha ao salvar as configurações.");
                 }
             },
             openHistoryModal() {
@@ -629,13 +653,24 @@
                     }
                 });
 
-                document.body.addEventListener('click', (e) => {
+                document.body.addEventListener('click', async (e) => { // Make listener async
                     const territoryCard = e.target.closest('.territory-card');
                     if (territoryCard) {
                         const id = parseInt(territoryCard.dataset.territoryId);
                         if (e.target.closest('[data-action="open-status"]')) this.openStatusModal(id);
-                        else if (e.target.classList.contains('archive-btn')) { if (!this.state.archived.includes(id)) this.state.archived.push(id); this.saveState(); }
-                        else if (e.target.classList.contains('restore-btn')) { this.state.archived = this.state.archived.filter(i => i !== id); this.saveState(); }
+                        else if (e.target.classList.contains('archive-btn')) { 
+                            const success = await this.triggerS13Update(id); // Await the S13 update
+                            if (success) { // Only archive if the S13 update was successful
+                                if (!this.state.archived.includes(id)) {
+                                    this.state.archived.push(id);
+                                }
+                                await this.saveState(); 
+                            }
+                        }
+                        else if (e.target.classList.contains('restore-btn')) { 
+                            this.state.archived = this.state.archived.filter(i => i !== id); 
+                            await this.saveState(); 
+                        }
                     }
                     if (e.target.classList.contains('add-territory-btn')) this.openSelectionModal(e.target.dataset.key);
                     if (e.target.parentElement?.classList.contains('selection-badge')) {
@@ -644,7 +679,7 @@
                         if (this.state.mode === 'weekday') this.state.weekdaySelections[key] = this.state.weekdaySelections[key].filter(i => i != idValue);
                         else if (key === 'DOMINGO') this.state.weekendSelections[key].territories = this.state.weekendSelections[key].territories.filter(i => i != idValue);
                         else this.state.weekendSelections[key] = this.state.weekendSelections[key].filter(i => i != idValue);
-                        this.saveState();
+                        await this.saveState();
                     }
                 });
                 document.body.addEventListener('input', (e) => { if (e.target.id === 'sunday-name-select') { this.state.weekendSelections.DOMINGO.name = e.target.value; this.saveState(); } });
@@ -656,13 +691,10 @@
                 });
                 this.ui.statusModal.addEventListener('change', (e) => {
                     const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
-                    const progressBefore = this.getTerritoryProgress(id).progress;
                     if (!this.state.status[id]) this.state.status[id] = {};
                     const cbs = this.ui.statusModal.querySelectorAll('.block-checkbox');
                     if (e.target.id === 'select-all-blocks') { cbs.forEach(cb => { cb.checked = e.target.checked; this.state.status[id][cb.dataset.block] = e.target.checked; }); }
                     else { this.state.status[id][e.target.dataset.block] = e.target.checked; this.ui.statusModal.querySelector('#select-all-blocks').checked = Array.from(cbs).every(cb => cb.checked); }
-                    const progressAfter = this.getTerritoryProgress(id).progress;
-                    if (progressBefore < 100 && progressAfter === 100) { this.triggerS13Update(id); }
                     this.saveState();
                 });
                 this.ui.selectionModal.querySelector('#confirm-selection-btn').addEventListener('click', () => {
@@ -696,16 +728,20 @@
                 });
                 await this.saveState();
             },
-            triggerS13Update(territoryId) {
+            async triggerS13Update(territoryId) {
                 const assignment = this.state.assignmentLog[territoryId];
-                if (!assignment) return; 
+                if (!assignment) {
+                    customAlert(`Não é possível arquivar. A designação para o território ${territoryId} não foi registrada. Por favor, gere a mensagem de designação primeiro.`);
+                    console.warn(`Nenhuma designação encontrada no log para o território ${territoryId}. Não é possível registrar na S13.`);
+                    return false; // Indicate failure
+                }
                 let name = assignment.name;
                 if (this.state.config.weekendGroupNames[name]) { name = this.state.config.weekendGroupNames[name]; }
                 const startDate = assignment.date;
                 const endDate = new Date().toISOString().split('T')[0];
-                s13App.addRecordAutomated(territoryId, name, startDate, endDate);
+                await s13App.addRecordAutomated(territoryId, name, startDate, endDate);
                 delete this.state.assignmentLog[territoryId];
-                this.saveState();
+                return true; // Indicate success
             },
             async generateMessage() {
                 this.updateDateDisplay();
@@ -749,7 +785,7 @@
                     if (sundaySelections && sundaySelections.territories.length > 0) {
                         hasAssignments = true;
                         const sundayName = sundaySelections.name.trim();
-                        sundaySelections.territories.forEach(id => { this.state.assignmentLog[id] = { name: sundayName, date: new Date(new Date(startDate).setDate(startDate.getDate() + 1)).toISOString().split('T')[0] }; });
+                        sundaySelections.forEach(id => { this.state.assignmentLog[id] = { name: sundayName, date: new Date(new Date(startDate).setDate(startDate.getDate() + 1)).toISOString().split('T')[0] }; });
                         const territoryNumbers = sundaySelections.territories.map(getTerritoryLine).join(', ');
                         message += `DOMINGO - @${sundayName || 'Responsável'}\nTERRITÓRIO: ${territoryNumbers}\n\n`;
                     }
@@ -829,9 +865,9 @@
 
             async saveState() {
                 try {
-                    await setDoc(doc(db, "appState", "s13Data"), { data: this.state.s13Data });
-                    await setDoc(doc(db, "appState", "publishers"), { names: this.state.publicadores });
-                    console.log("Dados do S-13 salvos no Firestore!");
+                    // Note: saveState is now only for publishers, as s13Data is managed by transactions.
+                    await setDoc(doc(db, "appState", "publishers"), { names: this.state.publicadores }, { merge: true });
+                    console.log("Dados de publicadores do S-13 salvos no Firestore!");
                 } catch(error) {
                     console.error("Erro ao salvar dados do S-13:", error);
                 }
@@ -854,7 +890,7 @@
                 if (novoNome && !this.state.publicadores.includes(novoNome)) {
                     this.state.publicadores.push(novoNome); this.state.publicadores.sort();
                     this.saveState(); this.ui.novoNomeInput.value = '';
-                } else if (this.state.publicadores.includes(novoNome)) { alert('Este nome já está cadastrado.'); }
+                } else if (this.state.publicadores.includes(novoNome)) { customAlert('Este nome já está cadastrado.'); }
             },
             deleteName(e) {
                 if (e.target.classList.contains('s13-delete-btn')) {
@@ -869,8 +905,11 @@
             getMaxPages() {
                 let maxPages = 1;
                 for (const territoryId in this.state.s13Data) {
-                    const pages = this.state.s13Data[territoryId].length;
-                    if (pages > maxPages) maxPages = pages;
+                    const numRecords = this.state.s13Data[territoryId].length;
+                    const pagesForTerritory = Math.ceil(numRecords / this.config.numDesignations) || 1;
+                    if (pagesForTerritory > maxPages) {
+                        maxPages = pagesForTerritory;
+                    }
                 }
                 return maxPages;
             },
@@ -889,8 +928,12 @@
                 let html = '';
                 for (let i = 1; i <= this.config.numTerritories; i++) {
                     const rowClass = i % 2 === 0 ? 'row-even' : 'row-odd';
-                    const territoryPages = this.state.s13Data[i] || [];
-                    const pageData = territoryPages[pageIndex] || [];
+                    const allRecords = this.state.s13Data[i] || [];
+                    
+                    const startIndex = pageIndex * this.config.numDesignations;
+                    const endIndex = startIndex + this.config.numDesignations;
+                    const pageData = allRecords.slice(startIndex, endIndex);
+
                     html += `<tr id="s13-row-${i}-names" class="${rowClass}"><td rowspan="2">${i}</td><td rowspan="2" id="s13-t${i}-last-date"></td>`;
                     for (let j = 0; j < this.config.numDesignations; j++) {
                         const record = pageData[j];
@@ -902,7 +945,8 @@
                         html += `<td id="s13-t${i}-start-${j}">${record ? this.formatDate(record.start) : ''}</td><td id="s13-t${i}-end-${j}">${record ? this.formatDate(record.end) : ''}</td>`;
                     }
                     html += `</tr>`;
-                    const lastRecord = territoryPages.flat().slice(-1)[0];
+                    
+                    const lastRecord = allRecords.length > 0 ? allRecords[allRecords.length - 1] : null;
                     if(lastRecord) {
                        setTimeout(() => {
                             const lastDateCell = document.getElementById(`s13-t${i}-last-date`);
@@ -914,26 +958,56 @@
                 this.renderPagination();
             },
             formatDate(dataStr) { if (!dataStr) return ''; const [y, m, d] = dataStr.split('T')[0].split('-'); return `${d}/${m}/${y.slice(-2)}`; },
-            _addRecord(territoryId, name, start, end) {
-                if (!this.state.s13Data[territoryId]) {
-                    this.state.s13Data[territoryId] = [[]];
+            
+            // =================================================================
+            // FUNÇÃO _addRecord ATUALIZADA - INÍCIO
+            // =================================================================
+            async _addRecord(territoryId, name, start, end) {
+                console.log(`Tentando adicionar registro S13 para Território: ${territoryId}, Nome: ${name}, Início: ${start}, Fim: ${end}`);
+                if (!territoryId || !name || !start || !end) {
+                    console.error("Dados inválidos para _addRecord. Abortando.");
+                    customAlert("Erro: Dados inválidos fornecidos para criar o registro.");
+                    return;
                 }
-                let lastPage = this.state.s13Data[territoryId][this.state.s13Data[territoryId].length - 1];
-                if (lastPage.length >= this.config.numDesignations) {
-                    this.state.s13Data[territoryId].push([]);
-                    lastPage = this.state.s13Data[territoryId][this.state.s13Data[territoryId].length - 1];
+
+                const s13Ref = doc(db, "appState", "s13Data");
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const s13Doc = await transaction.get(s13Ref);
+                        const newRecord = { name, start, end };
+
+                        const data = s13Doc.exists() ? s13Doc.data().data || {} : {};
+                        
+                        const newData = { ...data };
+
+                        const records = newData[territoryId] ? [...newData[territoryId]] : [];
+                        
+                        records.push(newRecord);
+
+                        newData[territoryId] = records;
+                        
+                        transaction.set(s13Ref, { data: newData });
+                    });
+                    console.log("Registro S13 salvo com sucesso via transação.");
+                } catch (e) {
+                    console.error("Falha na transação S13: ", e);
+                    customAlert("Ocorreu um erro ao salvar o registro S13. Tente novamente.");
                 }
-                lastPage.push({ name, start, end });
-                this.saveState();
-                this.renderTable(this.state.s13Data[territoryId].length - 1);
             },
-            addRecordAutomated(territoryId, name, start, end) { this._addRecord(territoryId, name, start, end); },
-            addRecordFromModal() {
+            // =================================================================
+            // FUNÇÃO _addRecord ATUALIZADA - FIM
+            // =================================================================
+
+            async addRecordAutomated(territoryId, name, start, end) { 
+                await this._addRecord(territoryId, name, start, end); 
+            },
+            async addRecordFromModal(e) {
+                e.preventDefault();
                 const num = this.ui.territorioNumeroInput.value; const nome = this.ui.nomeSelect.value;
                 const start = this.ui.dataInicioInput.value; const end = this.ui.dataConclusaoInput.value;
-                if (!num || !nome || !start || !end) { alert('Por favor, preencha todos os campos.'); return; }
-                if (new Date(end) < new Date(start)) { alert('A data de conclusão não pode ser anterior à de designação.'); return; }
-                this._addRecord(num, nome, start, end);
+                if (!num || !nome || !start || !end) { customAlert('Por favor, preencha todos os campos.'); return; }
+                if (new Date(end) < new Date(start)) { customAlert('A data de conclusão não pode ser anterior à de designação.'); return; }
+                await this._addRecord(num, nome, start, end);
                 this.ui.form.reset(); this.ui.addRecordModal.classList.add('hidden');
             },
             async exportToExcel() {
@@ -948,14 +1022,14 @@
                     XLSX.utils.book_append_sheet(workbook, worksheet, `Planilha ${i + 1}`);
                 }
                 this.renderTable(originalPage);
-                XLSX.writeFile(workbook, "REGISTRO_DE_TERRITORIO_S13.xlsx");
+                XLSX.writeFile("REGISTRO_DE_TERRITORIO_S13.xlsx");
             },
             async resetS13Data() {
-                this.state.s13Data = {};
-                await this.saveState();
+                // Para zerar, usamos set para sobrescrever o documento com um objeto vazio.
+                await setDoc(doc(db, "appState", "s13Data"), { data: {} });
             },
             setupEventListeners() {
-                this.ui.form.addEventListener('submit', (e) => { e.preventDefault(); this.addRecordFromModal(); });
+                this.ui.form.addEventListener('submit', (e) => this.addRecordFromModal(e));
                 this.ui.addNameForm.addEventListener('submit', (e) => this.addName(e));
                 this.ui.listaPublicadores.addEventListener('click', (e) => this.deleteName(e));
                 this.ui.baixarBtn.addEventListener('click', () => this.exportToExcel());
