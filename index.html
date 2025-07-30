@@ -449,23 +449,65 @@
             },
             renderAssignmentCards() {
                 this.ui.weekdayContainer.innerHTML = '';
-                for (const [day, person] of Object.entries(this.state.config.weekday || {})) { this.ui.weekdayContainer.appendChild(this.createAssignmentCard(day, person, this.state.weekdaySelections[day] || [])); }
+                const dayOffsets = { 'SEGUNDA': 0, 'TERÇA': 1, 'QUARTA': 2, 'QUINTA': 3, 'SEXTA': 4 };
+                const startDate = this.getAssignmentStartDate();
+                
+                for (const [day, person] of Object.entries(this.state.config.weekday || {})) {
+                    const assignmentDate = new Date(startDate.getTime());
+                    assignmentDate.setUTCDate(startDate.getUTCDate() + (dayOffsets[day] || 0));
+                    this.ui.weekdayContainer.appendChild(this.createAssignmentCard(day, person, this.state.weekdaySelections[day] || [], assignmentDate));
+                }
+                
                 this.ui.weekendContainer.innerHTML = '';
+                const weekendStartDate = this.getAssignmentStartDate();
+                const saturdayDate = new Date(weekendStartDate.getTime());
+                saturdayDate.setUTCDate(weekendStartDate.getUTCDate() + 5);
+                const sundayDate = new Date(weekendStartDate.getTime());
+                sundayDate.setUTCDate(weekendStartDate.getUTCDate() + 6);
+
                 for (const [key, name] of Object.entries(this.state.config.weekend || {})) {
-                    if (key === 'DOMINGO') { this.ui.weekendContainer.appendChild(this.createSundayCard()); }
-                    else { this.ui.weekendContainer.appendChild(this.createAssignmentCard(key, name, this.state.weekendSelections[key] || [])); }
+                    if (key === 'DOMINGO') {
+                        this.ui.weekendContainer.appendChild(this.createSundayCard(sundayDate));
+                    } else {
+                        this.ui.weekendContainer.appendChild(this.createAssignmentCard(key, name, this.state.weekendSelections[key] || [], saturdayDate));
+                    }
                 }
             },
-            createAssignmentCard(key, title, selections) {
-                const card = document.createElement('div'); card.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col';
-                card.innerHTML = `<div><h3 class="font-bold text-lg text-gray-800">${key.startsWith('SABADO') ? 'SÁBADO' : key}</h3><p class="text-sm text-gray-600 mb-3">${title}</p></div><div class="flex-grow min-h-[60px] bg-white border rounded-md p-1 flex flex-wrap gap-1" id="badges-${key}"></div><button class="add-territory-btn mt-3 w-full bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200" data-key="${key}">Adicionar</button>`;
+            createAssignmentCard(key, title, selections, date) {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col';
+                const format = (d) => {
+                    const day = String(d.getUTCDate()).padStart(2, '0');
+                    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    return `${day}/${month}`;
+                };
+                const dateString = date ? `<span class="font-normal text-gray-500 text-sm">${format(date)}</span>` : '';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-baseline">
+                            <h3 class="font-bold text-lg text-gray-800">${key.startsWith('SABADO') ? 'SÁBADO' : key}</h3>
+                            ${dateString}
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3">${title}</p>
+                    </div>
+                    <div class="flex-grow min-h-[60px] bg-white border rounded-md p-1 flex flex-wrap gap-1" id="badges-${key}"></div>
+                    <button class="add-territory-btn mt-3 w-full bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200" data-key="${key}">Adicionar</button>`;
+                
                 const badgeContainer = card.querySelector(`#badges-${key}`);
-                if (selections.length === 0) { badgeContainer.innerHTML = `<span class="text-xs text-gray-400 p-2">Nenhum</span>`; }
-                else { selections.forEach(id => { badgeContainer.innerHTML += `<span class="selection-badge">T-${id} <button data-key="${key}" data-id="${id}">&times;</button></span>`; }); }
+                if (selections.length === 0) {
+                    badgeContainer.innerHTML = `<span class="text-xs text-gray-400 p-2">Nenhum</span>`;
+                } else {
+                    selections.forEach(id => {
+                        badgeContainer.innerHTML += `<span class="selection-badge">T-${id} <button data-key="${key}" data-id="${id}">&times;</button></span>`;
+                    });
+                }
                 return card;
             },
-            createSundayCard() {
-                const key = 'DOMINGO'; const card = document.createElement('div'); card.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col';
+            createSundayCard(date) {
+                const key = 'DOMINGO';
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col';
                 const publicadores = s13App.state.publicadores || [];
                 let optionsHTML = '<option value="">Selecione um responsável</option>';
                 const sundaySelection = this.state.weekendSelections.DOMINGO || { name: '', territories: [] };
@@ -473,32 +515,63 @@
                     const isSelected = sundaySelection.name === nome ? 'selected' : '';
                     optionsHTML += `<option value="${nome}" ${isSelected}>${nome}</option>`;
                 });
-                card.innerHTML = `<div><h3 class="font-bold text-lg text-gray-800">DOMINGO</h3><select id="sunday-name-select" class="w-full p-2 border border-gray-300 rounded-md mt-1 mb-3 bg-white">${optionsHTML}</select></div><div class="flex-grow min-h-[60px] bg-white border rounded-md p-1 flex flex-wrap gap-1" id="badges-${key}"></div><button class="add-territory-btn mt-3 w-full bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200" data-key="${key}">Adicionar</button>`;
-                const badgeContainer = card.querySelector(`#badges-${key}`); const selections = sundaySelection.territories;
-                if (selections.length === 0) { badgeContainer.innerHTML = `<span class="text-xs text-gray-400 p-2">Nenhum</span>`; }
-                else { selections.forEach(id => { badgeContainer.innerHTML += `<span class="selection-badge">${typeof id === 'number' ? 'T-' : ''}${id} <button data-key="${key}" data-id="${id}">&times;</button></span>`; }); }
+
+                const format = (d) => {
+                    const day = String(d.getUTCDate()).padStart(2, '0');
+                    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    return `${day}/${month}`;
+                };
+                const dateString = date ? `<span class="font-normal text-gray-500 text-sm">${format(date)}</span>` : '';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-baseline">
+                            <h3 class="font-bold text-lg text-gray-800">DOMINGO</h3>
+                            ${dateString}
+                        </div>
+                        <select id="sunday-name-select" class="w-full p-2 border border-gray-300 rounded-md mt-1 mb-3 bg-white">${optionsHTML}</select>
+                    </div>
+                    <div class="flex-grow min-h-[60px] bg-white border rounded-md p-1 flex flex-wrap gap-1" id="badges-${key}"></div>
+                    <button class="add-territory-btn mt-3 w-full bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200" data-key="${key}">Adicionar</button>`;
+                
+                const badgeContainer = card.querySelector(`#badges-${key}`);
+                const selections = sundaySelection.territories;
+                if (selections.length === 0) {
+                    badgeContainer.innerHTML = `<span class="text-xs text-gray-400 p-2">Nenhum</span>`;
+                } else {
+                    selections.forEach(id => {
+                        badgeContainer.innerHTML += `<span class="selection-badge">${typeof id === 'number' ? 'T-' : ''}${id} <button data-key="${key}" data-id="${id}">&times;</button></span>`;
+                    });
+                }
                 return card;
             },
             getAssignmentStartDate(baseDate = this.state.selectedDate) {
-                const date = new Date(baseDate);
+                const date = new Date(baseDate.getTime()); // Create a copy
+                const dayOfWeek = date.getUTCDay(); // 0 (Sun) to 6 (Sat)
+                
                 if (this.state.mode === 'weekday') {
-                    const dayOfWeek = date.getDay(); 
                     const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                    return new Date(date.setDate(date.getDate() + diffToMonday));
-                } else {
-                    const dayOfWeek = date.getDay();
-                    const diffToSaturday = dayOfWeek === 0 ? -1 : 6 - dayOfWeek;
-                    return new Date(date.setDate(date.getDate() + diffToSaturday));
+                    date.setUTCDate(date.getUTCDate() + diffToMonday);
+                } else { // weekend
+                    const diffToSaturday = 6 - dayOfWeek;
+                    date.setUTCDate(date.getUTCDate() + diffToSaturday);
                 }
+                return date;
             },
             updateDateDisplay() {
-                const format = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const format = (d) => {
+                    const day = String(d.getUTCDate()).padStart(2, '0');
+                    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    return `${day}/${month}`;
+                };
                 const startDate = this.getAssignmentStartDate();
                 if (this.state.mode === 'weekday') {
-                    const endDate = new Date(new Date(startDate).setDate(startDate.getDate() + 4));
+                    const endDate = new Date(startDate.getTime());
+                    endDate.setUTCDate(startDate.getUTCDate() + 4);
                     this.ui.weekDates.textContent = `Programação para a semana de ${format(startDate)} a ${format(endDate)}`;
                 } else {
-                    const endDate = new Date(new Date(startDate).setDate(startDate.getDate() + 1));
+                    const endDate = new Date(startDate.getTime());
+                    endDate.setUTCDate(startDate.getUTCDate() + 1);
                     this.ui.weekDates.textContent = `Programação para o final de semana de ${format(startDate)} e ${format(endDate)}`;
                 }
             },
@@ -508,6 +581,7 @@
                 this.ui.modeWeekendBtn.classList.toggle('mode-btn-active', !isWeekday); this.ui.modeWeekendBtn.classList.toggle('mode-btn-inactive', isWeekday);
                 this.ui.weekdayContainer.classList.toggle('hidden', !isWeekday); this.ui.weekendContainer.classList.toggle('hidden', isWeekday);
                 this.updateDateDisplay(); 
+                this.renderAssignmentCards(); // Re-render cards to show correct dates
                 if (doSave) this.saveState();
             },
             openStatusModal(id) {
@@ -622,9 +696,14 @@
             setupWeekPicker() {
                 const today = new Date();
                 this.ui.weekPicker.value = today.toISOString().split('T')[0];
+                const parts = this.ui.weekPicker.value.split('-').map(Number);
+                this.state.selectedDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+                
                 this.ui.weekPicker.addEventListener('change', (e) => {
-                    this.state.selectedDate = new Date(e.target.value + 'T00:00:00');
+                    const parts = e.target.value.split('-').map(Number);
+                    this.state.selectedDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
                     this.updateDateDisplay();
+                    this.renderAssignmentCards();
                 });
             },
             setupEventListeners() {
@@ -757,35 +836,51 @@
                     if (pendingBlocks.length < allBlocks.length) return `${id} (${pendingBlocks.join(', ')})`;
                     return `${id}`;
                 };
+
                 if (this.state.mode === 'weekday') {
+                    const dayOffsets = { 'SEGUNDA': 0, 'TERÇA': 1, 'QUARTA': 2, 'QUINTA': 3, 'SEXTA': 4 };
                     for (const [day, person] of Object.entries(this.state.config.weekday)) {
                         const selections = this.state.weekdaySelections[day];
                         if (selections && selections.length > 0) {
                             hasAssignments = true;
-                            selections.forEach(id => { this.state.assignmentLog[id] = { name: person, date: startDate.toISOString().split('T')[0] }; });
+                            
+                            const assignmentDate = new Date(startDate.getTime());
+                            assignmentDate.setUTCDate(startDate.getUTCDate() + (dayOffsets[day] || 0));
+                            const assignmentDateString = assignmentDate.toISOString().split('T')[0];
+
+                            selections.forEach(id => {
+                                this.state.assignmentLog[id] = { name: person, date: assignmentDateString };
+                            });
                             const territoryNumbers = selections.map(getTerritoryLine).join(', ');
                             message += `${day.toUpperCase()} - @${person}\nTERRITÓRIO: ${territoryNumbers}\n\n`;
                         }
                     }
                 } else {
+                    const weekendStartDate = this.getAssignmentStartDate();
+                    const saturdayDate = new Date(weekendStartDate.getTime());
+                    const sundayDate = new Date(weekendStartDate.getTime());
+                    sundayDate.setUTCDate(sundayDate.getUTCDate() + 1);
+
                     let saturdayAssignments = [];
                     for (const [key, title] of Object.entries(this.state.config.weekend)) {
                         if (key.startsWith('SABADO')) {
                             const selections = this.state.weekendSelections[key];
                             if (selections && selections.length > 0) {
                                 hasAssignments = true;
-                                selections.forEach(id => { this.state.assignmentLog[id] = { name: key, date: startDate.toISOString().split('T')[0] }; });
+                                selections.forEach(id => { this.state.assignmentLog[id] = { name: key, date: saturdayDate.toISOString().split('T')[0] }; });
                                 const territoryNumbers = selections.map(getTerritoryLine).join(', ');
                                 saturdayAssignments.push(`${title.toUpperCase()}\nTERRITÓRIO: ${territoryNumbers}`);
                             }
                         }
                     }
                     if (saturdayAssignments.length > 0) { message += 'SÁBADO:\n' + saturdayAssignments.join('\n\n') + '\n\n'; }
+                    
                     const sundaySelections = this.state.weekendSelections.DOMINGO;
                     if (sundaySelections && sundaySelections.territories.length > 0) {
                         hasAssignments = true;
                         const sundayName = sundaySelections.name.trim();
-                        sundaySelections.forEach(id => { this.state.assignmentLog[id] = { name: sundayName, date: new Date(new Date(startDate).setDate(startDate.getDate() + 1)).toISOString().split('T')[0] }; });
+                        const sundayDateString = sundayDate.toISOString().split('T')[0];
+                        sundaySelections.territories.forEach(id => { this.state.assignmentLog[id] = { name: sundayName, date: sundayDateString }; });
                         const territoryNumbers = sundaySelections.territories.map(getTerritoryLine).join(', ');
                         message += `DOMINGO - @${sundayName || 'Responsável'}\nTERRITÓRIO: ${territoryNumbers}\n\n`;
                     }
@@ -959,9 +1054,6 @@
             },
             formatDate(dataStr) { if (!dataStr) return ''; const [y, m, d] = dataStr.split('T')[0].split('-'); return `${d}/${m}/${y.slice(-2)}`; },
             
-            // =================================================================
-            // FUNÇÃO _addRecord ATUALIZADA - INÍCIO
-            // =================================================================
             async _addRecord(territoryId, name, start, end) {
                 console.log(`Tentando adicionar registro S13 para Território: ${territoryId}, Nome: ${name}, Início: ${start}, Fim: ${end}`);
                 if (!territoryId || !name || !start || !end) {
@@ -994,9 +1086,6 @@
                     customAlert("Ocorreu um erro ao salvar o registro S13. Tente novamente.");
                 }
             },
-            // =================================================================
-            // FUNÇÃO _addRecord ATUALIZADA - FIM
-            // =================================================================
 
             async addRecordAutomated(territoryId, name, start, end) { 
                 await this._addRecord(territoryId, name, start, end); 
