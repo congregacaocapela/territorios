@@ -62,6 +62,9 @@
             </button>
             <h1 id="nav-title" class="text-lg sm:text-xl font-bold">Painel Principal</h1>
             <div class="flex items-center gap-1 sm:gap-2">
+                 <button id="open-link-settings-modal-btn" title="Configurar Links dos Territórios" class="p-2 text-white hover:text-gray-300 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+                </button>
                 <button id="open-history-modal-btn" title="Histórico de Designações" class="p-2 text-white hover:text-gray-300 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </button>
@@ -257,6 +260,22 @@
             </div>
         </div>
     </div>
+    <!-- Link Settings Modal -->
+    <div id="link-settings-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex justify-center items-center p-4 z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-4xl relative">
+            <button id="close-link-settings-modal-btn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Configurar Links dos Territórios</h2>
+            <form id="link-settings-form">
+                <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-4 modal-body grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4" id="link-settings-container">
+                    <!-- Inputs serão gerados via JS -->
+                </div>
+                <div class="mt-6 pt-4 border-t flex justify-end gap-4">
+                    <button type="button" id="cancel-link-settings-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-md hover:bg-gray-400">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-blue-700">Salvar Links</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 
     <!-- SCRIPT DE INICIALIZAÇÃO DO FIREBASE (MODULAR) -->
@@ -309,54 +328,7 @@
                 weekendGroupNames: { 'SABADO-1': 'Marcio Arruda', 'SABADO-2': 'Francisco Godoy', 'SABADO-3': 'Willian Lindem' },
                 rural: ['Iteraçu', 'Barra', 'Barreirinho', 'Canguera', 'Plens', 'Guarapiranga', 'Iperozinho', 'Morro']
             },
-            territoryLinks: {
-                1: 'https://app.territory-manager.com.br/home?p=territorio%2F279%3Fround%3D3&s=f538f0b8-d01c-412f-aa17-9656e5c8d360',
-                2: 'https://app.territory-manager.com.br/home?p=territorio%2F280%3Fround%3D3&s=dc2624dc-3d9c-496b-8953-1c87e4774429',
-                3: 'https://app.territory-manager.com.br/home?p=territorio%2F281%3Fround%3D3&s=916e71bb-a513-48a9-a303-dca9ba6f014f',
-                4: 'https://app.territory-manager.com.br/home?p=territorio%2F282%3Fround%3D3&s=480570e7-d618-4bb8-a592-4e91eff6289b',
-                5: 'https://app.territory-manager.com.br/home?p=territorio%2F283%3Fround%3D3&s=781e1a37-d54e-4864-a0ef-5252909cc095',
-                6: 'https://app.territory-manager.com.br/home?p=territorio%2F284%3Fround%3D3&s=ba72987b-75a8-4875-8778-75a2a791ba74',
-                7: 'https://app.territory-manager.com.br/home?p=territorio%2F285%3Fround%3D3&s=94e8d1be-c806-4cd0-8975-0b29c0a401d6',
-                8: 'https://app.territory-manager.com.br/home?p=territorio%2F286%3Fround%3D3&s=bae65950-669f-42a5-a1e7-b4057b37b901',
-                9: 'https://app.territory-manager.com.br/home?p=territorio%2F287%3Fround%3D3&s=773c9339-b352-4168-8625-b2823a27351d',
-                10: 'https://app.territory-manager.com.br/home?p=territorio%2F288%3Fround%3D3&s=13570d95-f5be-4f0c-b5ad-f077b604934c',
-                11: 'https://app.territory-manager.com.br/home?p=territorio%2F289%3Fround%3D3&s=fbc5ec1b-e1a8-4e34-80d1-dda0e9222b37',
-                12: 'https://app.territory-manager.com.br/home?p=territorio%2F290%3Fround%3D3&s=ebb805b1-6ac6-40e3-ba45-ce907a4a62db',
-                13: 'https://app.territory-manager.com.br/home?p=territorio%2F291%3Fround%3D3&s=cab5ba60-b0b1-410e-b243-8f2d4c80aa1c',
-                14: 'https://app.territory-manager.com.br/home?p=territorio%2F292%3Fround%3D3&s=f92fe33c-fd42-450c-943b-1bf5890a4b3b',
-                15: 'https://app.territory-manager.com.br/home?p=territorio%2F293%3Fround%3D3&s=9f86926f-ef29-441e-9949-c93f49d8e8bd',
-                16: 'https://app.territory-manager.com.br/home?p=territorio%2F294%3Fround%3D3&s=4b216af5-64d9-4e2c-8a41-6a937315f72f',
-                17: 'https://app.territory-manager.com.br/home?p=territorio%2F295%3Fround%3D3&s=0f783c35-3233-46ea-a2b5-fa6973b55af6',
-                18: 'https://app.territory-manager.com.br/home?p=territorio%2F296%3Fround%3D3&s=197ee3d8-38be-4ba5-9eea-3474af75742d',
-                19: 'https://app.territory-manager.com.br/home?p=territorio%2F297%3Fround%3D3&s=10a6fb37-32f4-46ae-9737-44297f0d265a',
-                20: 'https://app.territory-manager.com.br/home?p=territorio%2F298%3Fround%3D3&s=f363fe31-854e-4ddb-b022-729ca8522e22',
-                21: 'https://app.territory-manager.com.br/home?p=territorio%2F299%3Fround%3D3&s=82c8db86-fb0c-49ca-8c4b-de1febb2c47d',
-                22: 'https://app.territory-manager.com.br/home?p=territorio%2F300%3Fround%3D3&s=013354ff-86fb-4e42-b54a-1d241edbd9d2',
-                23: 'https://app.territory-manager.com.br/home?p=territorio%2F301%3Fround%3D3&s=3ef66f77-9dad-4a4f-9ffe-6e125b5bba30',
-                24: 'https://app.territory-manager.com.br/home?p=territorio%2F302%3Fround%3D3&s=fdb4b814-8ea0-4292-883b-423eae485f28',
-                25: 'https://app.territory-manager.com.br/home?p=territorio%2F303%3Fround%3D3&s=41db864b-77d3-45d6-83a0-8d8717d0a02c',
-                26: 'https://app.territory-manager.com.br/home?p=territorio%2F304%3Fround%3D3&s=2d0190a5-4be9-4fab-89fe-c64e454a65ef',
-                27: 'https://app.territory-manager.com.br/home?p=territorio%2F305%3Fround%3D3&s=122d31a8-ed41-41cd-aaec-fc83ab294079',
-                28: 'https://app.territory-manager.com.br/home?p=territorio%2F306%3Fround%3D3&s=3e61294e-39df-4fff-909a-e0186a29567d',
-                29: 'https://app.territory-manager.com.br/home?p=territorio%2F307%3Fround%3D3&s=73ef678e-0276-495d-b3ee-0c3b657af0bc',
-                30: 'https://app.territory-manager.com.br/home?p=territorio%2F308%3Fround%3D3&s=c842f884-19a2-4b63-a7e5-12f1999a9b32',
-                31: 'https://app.territory-manager.com.br/home?p=territorio%2F309%3Fround%3D3&s=7c239924-c0f6-4c3a-9116-804e7bf15fca',
-                32: 'https://app.territory-manager.com.br/home?p=territorio%2F310%3Fround%3D3&s=07cf5633-2788-4517-8093-d0a7b3d157c4',
-                33: 'https://app.territory-manager.com.br/home?p=territorio%2F311%3Fround%3D3&s=63f833fa-9a6d-4394-8385-7f51f2a75155',
-                34: 'https://app.territory-manager.com.br/home?p=territorio%2F312%3Fround%3D3&s=c23b885c-7043-4ab3-b45b-6fd78ac4ee93',
-                35: 'https://app.territory-manager.com.br/home?p=territorio%2F313%3Fround%3D3&s=c17081bc-b47d-40c6-84fa-55c82f5ff154',
-                36: 'https://app.territory-manager.com.br/home?p=territorio%2F314%3Fround%3D3&s=3d8dba6d-ae9c-4a1c-bfce-62d05e6f728b',
-                37: 'https://app.territory-manager.com.br/home?p=territorio%2F315%3Fround%3D3&s=4a8dd879-2fd4-49d8-aa4f-c4846512beda',
-                38: 'https://app.territory-manager.com.br/home?p=territorio%2F316%3Fround%3D3&s=f2608770-6103-4edd-9e17-b8b6f22215b7',
-                39: 'https://app.territory-manager.com.br/home?p=territorio%2F317%3Fround%3D3&s=c341316c-51c9-462d-ae9d-52ac0415c258',
-                40: 'https://app.territory-manager.com.br/home?p=territorio%2F318%3Fround%3D3&s=8e5c8152-203b-44dd-a9a6-6be03accfe11',
-                41: 'https://app.territory-manager.com.br/home?p=territorio%2F319%3Fround%3D3&s=5eb01c1c-6b53-4883-9136-7f7a08b8703e',
-                42: 'https://app.territory-manager.com.br/home?p=territorio%2F320%3Fround%3D3&s=1e309e82-69dd-4d3c-891b-e6896d6e998a',
-                43: 'https://app.territory-manager.com.br/home?p=territorio%2F321%3Fround%3D3&s=0c83fba8-09b1-48cd-bda6-4753b0ef2537',
-                44: 'https://app.territory-manager.com.br/home?p=territorio%2F322%3Fround%3D3&s=cc34370f-9c14-48b2-a332-848910685307',
-                45: 'https://app.territory-manager.com.br/home?p=territorio%2F323%3Fround%3D3&s=49e869ce-97a9-467c-a36f-c56ac95c283c',
-                46: 'https://app.territory-manager.com.br/home?p=territorio%2F324%3Fround%3D3&s=213b6528-1111-447e-850f-22f30452309f'
-            },
+            territoryLinks: {},
             state: { 
                 config: {},
                 status: {}, weekdaySelections: {}, weekendSelections: {}, archived: [], mode: 'weekday', showArchived: false, assignmentLog: {},
@@ -389,6 +361,12 @@
                 historyEndDate: document.getElementById('history-end-date'),
                 filterHistoryBtn: document.getElementById('filter-history-btn'),
                 clearHistoryFilterBtn: document.getElementById('clear-history-filter-btn'),
+                linkSettingsModal: document.getElementById('link-settings-modal'),
+                openLinkSettingsBtn: document.getElementById('open-link-settings-modal-btn'),
+                closeLinkSettingsBtn: document.getElementById('close-link-settings-modal-btn'),
+                cancelLinkSettingsBtn: document.getElementById('cancel-link-settings-btn'),
+                linkSettingsForm: document.getElementById('link-settings-form'),
+                linkSettingsContainer: document.getElementById('link-settings-container'),
             },
             data: [
                 {id: 1, blocks: ['A', 'B', 'C', 'D']}, {id: 2, blocks: ['A', 'B', 'C', 'D']}, {id: 3, blocks: ['A', 'B']}, {id: 4, blocks: ['A', 'B', 'C']}, {id: 5, blocks: ['A', 'B', 'C']},
@@ -435,14 +413,19 @@
                     this.renderAssignmentCards();
                 });
 
-                const historyQuery = query(collection(db, "assignmentHistory"), orderBy("timestamp", "desc"), limit(100)); // Increased limit for better filtering
+                const historyQuery = query(collection(db, "assignmentHistory"), orderBy("timestamp", "desc"), limit(100));
                 onSnapshot(historyQuery, (querySnapshot) => {
                     console.log("Recebida atualização do 'assignmentHistory'");
                     this.state.history = [];
                     querySnapshot.forEach((doc) => {
                         this.state.history.push({ id: doc.id, ...doc.data() });
                     });
-                    this.filterAndRenderHistory(); // Render with current filters
+                    this.filterAndRenderHistory();
+                });
+
+                onSnapshot(doc(db, "appState", "territoryLinks"), (docSnapshot) => {
+                    console.log("Recebida atualização dos 'territoryLinks'");
+                    this.territoryLinks = docSnapshot.exists() ? docSnapshot.data().links || {} : {};
                 });
             },
 
@@ -742,7 +725,47 @@
                     this.ui.historyContainer.appendChild(historyElement);
                 });
             },
-            closeAllModals() { this.ui.statusModal.classList.add('hidden'); this.ui.selectionModal.classList.add('hidden'); this.ui.settingsModal.classList.add('hidden'); this.ui.historyModal.classList.add('hidden');},
+            openLinkSettingsModal() {
+                const container = this.ui.linkSettingsContainer;
+                container.innerHTML = '';
+                this.data.forEach(t => {
+                    const link = this.territoryLinks[t.id] || '';
+                    const inputGroup = `
+                        <div>
+                            <label for="link-t${t.id}" class="block text-sm font-medium text-gray-700">Território ${t.id}</label>
+                            <input type="url" id="link-t${t.id}" data-id="${t.id}" value="${link}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>`;
+                    container.innerHTML += inputGroup;
+                });
+                this.ui.linkSettingsModal.classList.remove('hidden');
+            },
+            async saveLinkSettings(e) {
+                e.preventDefault();
+                const newLinks = {};
+                const inputs = this.ui.linkSettingsForm.querySelectorAll('input[type="url"]');
+                inputs.forEach(input => {
+                    const id = input.dataset.id;
+                    if (input.value) {
+                        newLinks[id] = input.value.trim();
+                    }
+                });
+                try {
+                    await setDoc(doc(db, "appState", "territoryLinks"), { links: newLinks });
+                    console.log("Links salvos com sucesso!");
+                    this.ui.linkSettingsModal.classList.add('hidden');
+                    customAlert("Links atualizados com sucesso!");
+                } catch (error) {
+                    console.error("Erro ao salvar os links:", error);
+                    customAlert("Falha ao salvar os links.");
+                }
+            },
+            closeAllModals() { 
+                this.ui.statusModal.classList.add('hidden'); 
+                this.ui.selectionModal.classList.add('hidden'); 
+                this.ui.settingsModal.classList.add('hidden'); 
+                this.ui.historyModal.classList.add('hidden');
+                this.ui.linkSettingsModal.classList.add('hidden');
+            },
             setupWeekPicker() {
                 const today = new Date();
                 this.ui.weekPicker.value = today.toISOString().split('T')[0];
@@ -759,14 +782,21 @@
             setupEventListeners() {
                 this.ui.modeWeekdayBtn.addEventListener('click', () => this.setMode('weekday'));
                 this.ui.modeWeekendBtn.addEventListener('click', () => this.setMode('weekend'));
+                
+                // Event Listeners for Modals
                 this.ui.openSettingsBtn.addEventListener('click', () => this.openSettingsModal());
                 this.ui.closeSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
                 this.ui.cancelSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
                 this.ui.settingsForm.addEventListener('submit', (e) => this.saveSettings(e));
-                this.ui.settingsModal.addEventListener('click', (e) => { if (e.target === this.ui.settingsModal) this.ui.settingsModal.classList.add('hidden'); });
+                
+                this.ui.openLinkSettingsBtn.addEventListener('click', () => this.openLinkSettingsModal());
+                this.ui.closeLinkSettingsBtn.addEventListener('click', () => this.ui.linkSettingsModal.classList.add('hidden'));
+                this.ui.cancelLinkSettingsBtn.addEventListener('click', () => this.ui.linkSettingsModal.classList.add('hidden'));
+                this.ui.linkSettingsForm.addEventListener('submit', (e) => this.saveLinkSettings(e));
+
                 this.ui.openHistoryBtn.addEventListener('click', () => this.openHistoryModal());
                 this.ui.closeHistoryBtn.addEventListener('click', () => this.ui.historyModal.classList.add('hidden'));
-                this.ui.historyModal.addEventListener('click', (e) => { if (e.target === this.ui.historyModal) this.ui.historyModal.classList.add('hidden'); });
+                
                 this.ui.filterHistoryBtn.addEventListener('click', () => this.filterAndRenderHistory());
                 this.ui.clearHistoryFilterBtn.addEventListener('click', () => {
                     this.ui.historyStartDate.value = '';
@@ -782,14 +812,14 @@
                     }
                 });
 
-                document.body.addEventListener('click', async (e) => { // Make listener async
+                document.body.addEventListener('click', async (e) => {
                     const territoryCard = e.target.closest('.territory-card');
                     if (territoryCard) {
                         const id = parseInt(territoryCard.dataset.territoryId);
                         if (e.target.closest('[data-action="open-status"]')) this.openStatusModal(id);
                         else if (e.target.classList.contains('archive-btn')) { 
-                            const success = await this.triggerS13Update(id); // Await the S13 update
-                            if (success) { // Only archive if the S13 update was successful
+                            const success = await this.triggerS13Update(id);
+                            if (success) {
                                 if (!this.state.archived.includes(id)) {
                                     this.state.archived.push(id);
                                 }
@@ -839,9 +869,12 @@
                     this.ui.whatsappMessage.select(); document.execCommand('copy');
                     this.ui.copySuccess.classList.remove('hidden'); setTimeout(() => this.ui.copySuccess.classList.add('hidden'), 2000);
                 });
-                [this.ui.statusModal, this.ui.selectionModal, this.ui.settingsModal, this.ui.historyModal].forEach(m => {
-                    m.addEventListener('click', (e) => { if (e.target === m) this.closeAllModals(); });
-                    m.querySelector('[id^="close-"]').addEventListener('click', () => this.closeAllModals());
+                [this.ui.statusModal, this.ui.selectionModal, this.ui.settingsModal, this.ui.historyModal, this.ui.linkSettingsModal].forEach(m => {
+                    if(m) {
+                        m.addEventListener('click', (e) => { if (e.target === m) this.closeAllModals(); });
+                        const closeBtn = m.querySelector('[id^="close-"]');
+                        if(closeBtn) closeBtn.addEventListener('click', () => this.closeAllModals());
+                    }
                 });
                 this.ui.statusModal.querySelector('#save-status-btn').addEventListener('click', () => { this.closeAllModals(); this.renderGrid(); });
                 this.ui.resetTerritoriesBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Territórios', 'Tem certeza que deseja zerar todos os territórios? Esta ação irá restaurar os arquivados e marcar todas as quadras como pendentes.', () => this.resetTerritories()));
