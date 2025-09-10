@@ -26,11 +26,13 @@
     <!-- Barra de Navegação Superior -->
     <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-40">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="index.html" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
+            <a href="paineldecontrole.html" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
                 Início
             </a>
             <h1 class="text-lg sm:text-xl font-bold">Gestão de Territórios</h1>
-            <div></div> <!-- Espaçador -->
+            <button id="report-icon-btn" class="text-white hover:text-gray-300 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            </button>
         </div>
     </nav>
 
@@ -44,6 +46,41 @@
         <!-- Grelha de Territórios -->
         <div id="territory-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             <!-- Os cartões de território serão gerados aqui via JS -->
+        </div>
+    </div>
+
+    <!-- Modal de Geração de Relatório -->
+    <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Gerar Relatório de Casas</h2>
+                <button id="close-report-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="territory-selection-input" class="block text-sm font-medium text-gray-700">Territórios (ex: 1, 3-5, 8)</label>
+                    <input type="text" id="territory-selection-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" value="1-46">
+                </div>
+                <div>
+                    <p class="block text-sm font-medium text-gray-700">Incluir no relatório:</p>
+                    <div class="mt-2 space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="include-visited-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded" checked>
+                            <span class="ml-2 text-gray-700">Casas Visitadas</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="include-not-visited-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded" checked>
+                            <span class="ml-2 text-gray-700">Casas Não Visitadas</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button id="generate-csv-btn" class="bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-600 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" /></svg>
+                    <span id="generate-csv-btn-text">Gerar Planilha (CSV)</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -97,7 +134,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
@@ -137,6 +174,11 @@
             const infoModalTitle = document.getElementById('info-modal-title');
             const infoModalBody = document.getElementById('info-modal-body');
             const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
+            
+            const reportModal = document.getElementById('report-modal');
+            const reportIconBtn = document.getElementById('report-icon-btn');
+            const closeReportModalBtn = document.getElementById('close-report-modal-btn');
+            const generateCsvBtn = document.getElementById('generate-csv-btn');
 
             let localTerritoryData = {};
             const territoriesColRef = collection(db, "territories");
@@ -229,13 +271,12 @@
                 renderTerritoryCards();
             });
             
-            // --- Funções do Modal de Informação ---
             function openInfoModal(territoryId) {
                 const data = localTerritoryData[territoryId];
                 if (!data) return;
 
                 infoModalTitle.textContent = `Detalhes de ${data.name}`;
-                infoModalBody.innerHTML = ''; // Limpa o conteúdo anterior
+                infoModalBody.innerHTML = '';
 
                 if (!data.blocks || data.blocks.length === 0) {
                     infoModalBody.innerHTML = '<p class="text-gray-500">Nenhuma quadra foi configurada para este território.</p>';
@@ -280,7 +321,6 @@
                 infoModal.classList.remove('hidden');
             }
 
-             // --- Funções do Modal de Edição ---
             function createStreetInputRow(street = { name: '', houses: '', mapLink: '' }) {
                 const div = document.createElement('div');
                 div.className = 'p-3 bg-gray-100 rounded-lg border ml-4';
@@ -344,6 +384,95 @@
                 editModal.classList.add('hidden');
             }
             
+            function parseTerritorySelection(input) {
+                const ids = new Set();
+                const parts = input.split(',');
+                for (const part of parts) {
+                    if (part.includes('-')) {
+                        const [start, end] = part.split('-').map(Number);
+                        if (!isNaN(start) && !isNaN(end) && start <= end) {
+                            for (let i = start; i <= end; i++) ids.add(i);
+                        }
+                    } else {
+                        const num = Number(part.trim());
+                        if (!isNaN(num)) ids.add(num);
+                    }
+                }
+                return Array.from(ids);
+            }
+
+            function escapeCsvCell(cell) {
+                let cellString = String(cell == null ? '' : cell);
+                if (cellString.search(/("|,|\n)/g) >= 0) {
+                    cellString = '"' + cellString.replace(/"/g, '""') + '"';
+                }
+                return cellString;
+            }
+            
+            function downloadCSV(csvContent, fileName) {
+                const bom = '\uFEFF';
+                const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", fileName);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            async function generateReport() {
+                const selectionInput = document.getElementById('territory-selection-input').value;
+                const includeVisited = document.getElementById('include-visited-checkbox').checked;
+                const includeNotVisited = document.getElementById('include-not-visited-checkbox').checked;
+                
+                const btnText = document.getElementById('generate-csv-btn-text');
+                generateCsvBtn.disabled = true;
+                btnText.textContent = 'Gerando...';
+
+                const territoryIds = parseTerritorySelection(selectionInput);
+                const promises = territoryIds.map(id => getDoc(doc(db, "territories", String(id))));
+                
+                try {
+                    const docSnaps = await Promise.all(promises);
+                    const header = ['Território ID', 'Nome Território', 'Quadra', 'Rua', 'Casa', 'Status'];
+                    const rows = [];
+
+                    for (const docSnap of docSnaps) {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            const id = docSnap.id;
+                            
+                            data.blocks?.forEach(block => {
+                                block.streets?.forEach(street => {
+                                    const houses = street.houses.split(',').map(h => h.trim()).filter(Boolean);
+                                    houses.forEach(house => {
+                                        const isVisited = data.status?.[block.name]?.[street.name]?.[house] || false;
+                                        if ((isVisited && includeVisited) || (!isVisited && includeNotVisited)) {
+                                            rows.push([id, data.name, block.name, street.name, house, isVisited ? 'Visitada' : 'Não Visitada']);
+                                        }
+                                    });
+                                });
+                            });
+                        }
+                    }
+
+                    if (rows.length > 0) {
+                        const csvContent = [header.join(','), ...rows.map(row => row.map(escapeCsvCell).join(','))].join('\n');
+                        downloadCSV(csvContent, 'relatorio_casas.csv');
+                    } else {
+                        alert('Nenhuma casa encontrada para os critérios selecionados.');
+                    }
+                } catch (err) {
+                    console.error("Erro ao gerar relatório:", err);
+                    alert("Ocorreu um erro ao buscar os dados. Tente novamente.");
+                } finally {
+                     generateCsvBtn.disabled = false;
+                     btnText.textContent = 'Gerar Planilha (CSV)';
+                }
+            }
+
             // --- Event Listeners ---
             grid.addEventListener('click', (e) => {
                 const editButton = e.target.closest('.edit-territory-btn');
@@ -356,6 +485,13 @@
                     openInfoModal(infoButton.dataset.territoryId);
                 }
             });
+            
+            reportIconBtn.addEventListener('click', () => reportModal.classList.remove('hidden'));
+            closeReportModalBtn.addEventListener('click', () => reportModal.classList.add('hidden'));
+            reportModal.addEventListener('click', (e) => {
+                if(e.target === reportModal) reportModal.classList.add('hidden');
+            });
+            generateCsvBtn.addEventListener('click', generateReport);
 
             addBlockBtn.addEventListener('click', () => {
                 blocksList.appendChild(createBlockInputRow());
