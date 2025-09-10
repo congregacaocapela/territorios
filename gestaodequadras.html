@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Territórios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal-body-scrollable::-webkit-scrollbar { width: 8px; }
+        .modal-body-scrollable::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .modal-body-scrollable::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .modal-body-scrollable::-webkit-scrollbar-thumb:hover { background: #555; }
+        textarea { resize: vertical; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Error Banner -->
+    <div id="error-banner" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+        <p class="font-bold">Erro de Autenticação</p>
+        <p>Não foi possível conectar ao banco de dados. Verifique se o "Login anônimo" está ativado no seu projeto Firebase.</p>
+    </div>
+
+    <!-- Barra de Navegação Superior -->
+    <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-40">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="index.html" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
+                Início
+            </a>
+            <h1 class="text-lg sm:text-xl font-bold">Gestão de Territórios</h1>
+            <div></div> <!-- Espaçador -->
+        </div>
+    </nav>
+
+    <!-- Container da Aplicação -->
+    <div class="container mx-auto p-4 sm:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Visão Geral dos Territórios</h1>
+            <p class="text-base sm:text-lg text-gray-600 mt-2">Acompanhe e edite o progresso de todos os territórios.</p>
+        </header>
+
+        <!-- Grelha de Territórios -->
+        <div id="territory-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Os cartões de território serão gerados aqui via JS -->
+        </div>
+    </div>
+
+    <!-- Modal de Informações Detalhadas -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 id="info-modal-title" class="text-2xl font-bold">Detalhes do Território</h2>
+                <button id="close-info-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div id="info-modal-body" class="p-6 overflow-y-auto modal-body-scrollable flex-grow space-y-4">
+                <!-- Conteúdo do progresso das quadras será inserido aqui -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal de Edição de Território -->
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style="height: 90vh; max-height: 800px;">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 id="edit-modal-title" class="text-2xl font-bold">Editar Território</h2>
+                <button id="close-edit-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto modal-body-scrollable flex-grow">
+                <form id="edit-territory-form" class="space-y-6">
+                    <div>
+                        <label for="territory-name-input" class="block text-sm font-medium text-gray-700 mb-1">Nome do Território</label>
+                        <input type="text" id="territory-name-input" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">Quadras</h3>
+                        <div id="blocks-list" class="space-y-4">
+                            <!-- As quadras serão inseridas aqui dinamicamente -->
+                        </div>
+                        <button id="add-block-btn" type="button" class="mt-4 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="-2 -2 24 24" fill="currentColor"><path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" /></svg>
+                            Adicionar Quadra
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="p-6 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-4">
+                <button id="cancel-edit-btn" type="button" class="bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+                <button id="save-edit-btn" type="button" class="bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-600 transition-colors">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
+            authDomain: "quadrascasas.firebaseapp.com",
+            projectId: "quadrascasas",
+            storageBucket: "quadrascasas.firebasestorage.app",
+            messagingSenderId: "1088979227180",
+            appId: "1:1088979227180:web:fbf72a87b811236efeb789",
+            measurementId: "G-YEQ216076G"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const errorBanner = document.getElementById('error-banner');
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Authentication failed:", error);
+                errorBanner.classList.remove('hidden');
+                return;
+            }
+
+            const grid = document.getElementById('territory-cards-grid');
+            const editModal = document.getElementById('edit-modal');
+            const closeModalBtn = document.getElementById('close-edit-modal-btn');
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            const saveBtn = document.getElementById('save-edit-btn');
+            const modalTitle = document.getElementById('edit-modal-title');
+            const territoryNameInput = document.getElementById('territory-name-input');
+            const blocksList = document.getElementById('blocks-list');
+            const addBlockBtn = document.getElementById('add-block-btn');
+
+            const infoModal = document.getElementById('info-modal');
+            const infoModalTitle = document.getElementById('info-modal-title');
+            const infoModalBody = document.getElementById('info-modal-body');
+            const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
+
+            let localTerritoryData = {};
+            const territoriesColRef = collection(db, "territories");
+
+            const defaultTerritoryNames = {
+                1: "Centro", 2: "Capela Material de Construção", 3: "Campo do Grude", 4: "Lanchonete Jó",
+                5: "Salão do Reino", 6: "Mercado do Niro", 7: "Creche CDHU", 8: "Residência Wilson 1",
+                9: "Residência Wilson 2", 10: "Escola Francisco M. Almeida",
+            };
+
+            async function initializeDefaultDataIfNeeded(snapshot) {
+                if (snapshot.empty) {
+                    const batch = writeBatch(db);
+                    for (let i = 1; i <= 46; i++) {
+                        const docRef = doc(db, "territories", String(i));
+                        batch.set(docRef, {
+                            name: defaultTerritoryNames[i] || `Território ${i}`,
+                            blocks: []
+                        });
+                    }
+                    await batch.commit();
+                }
+            }
+            
+            function renderTerritoryCards() {
+                grid.innerHTML = '';
+                for (let i = 1; i <= 46; i++) {
+                    const data = localTerritoryData[i];
+                    if (!data) continue;
+
+                    const name = data.name || `Território ${i}`;
+                    
+                    const totalHouses = data.blocks?.reduce((blockAcc, block) => {
+                        const housesInBlock = block.streets?.reduce((streetAcc, street) => {
+                            const houseNumbers = street.houses ? street.houses.split(',').filter(n => n.trim() !== '') : [];
+                            return streetAcc + houseNumbers.length;
+                        }, 0) || 0;
+                        return blockAcc + housesInBlock;
+                    }, 0) || 0;
+
+                    let completedHouses = 0;
+                    if (data.status) {
+                        Object.values(data.status).forEach(block => {
+                            Object.values(block).forEach(street => {
+                                Object.values(street).forEach(isCompleted => {
+                                    if (isCompleted) {
+                                        completedHouses++;
+                                    }
+                                });
+                            });
+                        });
+                    }
+                    
+                    const progress = totalHouses > 0 ? Math.round((completedHouses / totalHouses) * 100) : 0;
+
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-5 rounded-2xl shadow-md flex flex-col gap-4 transition-transform hover:scale-105';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-bold text-gray-800 flex-1">${String(i).padStart(2, '0')} - ${name}</h3>
+                            <button data-territory-id="${i}" class="info-btn text-gray-400 hover:text-blue-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </button>
+                        </div>
+                        <div class="flex-grow py-2 space-y-1">
+                            <div class="flex items-center gap-3 text-sm">
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: ${progress}%"></div>
+                                </div>
+                                <span class="font-semibold text-gray-700">${progress}%</span>
+                            </div>
+                            <div class="text-xs text-gray-500 text-center">
+                                ${completedHouses} de ${totalHouses} casas concluídas
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-auto">
+                            <button data-territory-id="${i}" class="edit-territory-btn flex-1 bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">Editar</button>
+                            <a href="territorio_${i}.html" class="flex-1 bg-blue-500 text-white text-center font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Ir para Território</a>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                }
+            }
+
+            onSnapshot(territoriesColRef, async (snapshot) => {
+                await initializeDefaultDataIfNeeded(snapshot);
+                snapshot.forEach((doc) => {
+                    localTerritoryData[doc.id] = doc.data();
+                });
+                renderTerritoryCards();
+            });
+            
+            // --- Funções do Modal de Informação ---
+            function openInfoModal(territoryId) {
+                const data = localTerritoryData[territoryId];
+                if (!data) return;
+
+                infoModalTitle.textContent = `Detalhes de ${data.name}`;
+                infoModalBody.innerHTML = ''; // Limpa o conteúdo anterior
+
+                if (!data.blocks || data.blocks.length === 0) {
+                    infoModalBody.innerHTML = '<p class="text-gray-500">Nenhuma quadra foi configurada para este território.</p>';
+                    infoModal.classList.remove('hidden');
+                    return;
+                }
+
+                data.blocks.forEach(block => {
+                    let totalHousesInBlock = 0;
+                    let completedHousesInBlock = 0;
+
+                    block.streets.forEach(street => {
+                        const houseNumbers = street.houses.split(',').filter(n => n.trim() !== '');
+                        totalHousesInBlock += houseNumbers.length;
+                        
+                        houseNumbers.forEach(num => {
+                             if(data.status?.[block.name]?.[street.name]?.[num]) {
+                                 completedHousesInBlock++;
+                             }
+                        });
+                    });
+
+                    const progress = totalHousesInBlock > 0 ? Math.round((completedHousesInBlock / totalHousesInBlock) * 100) : 0;
+                    const remainingHouses = totalHousesInBlock - completedHousesInBlock;
+
+                    const blockHtml = `
+                        <div class="p-4 border rounded-lg">
+                            <h4 class="font-bold text-lg">Quadra ${block.name}</h4>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 my-2">
+                                <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
+                            </div>
+                            <div class="text-sm flex justify-between text-gray-600">
+                                <span>Progresso: ${progress}%</span>
+                                <span>${completedHousesInBlock}/${totalHousesInBlock} casas</span>
+                            </div>
+                             <p class="text-sm text-gray-600 mt-1">Faltam ${remainingHouses} casas.</p>
+                        </div>
+                    `;
+                    infoModalBody.innerHTML += blockHtml;
+                });
+
+                infoModal.classList.remove('hidden');
+            }
+
+             // --- Funções do Modal de Edição ---
+            function createStreetInputRow(street = { name: '', houses: '', mapLink: '' }) {
+                const div = document.createElement('div');
+                div.className = 'p-3 bg-gray-100 rounded-lg border ml-4';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 mb-2">
+                        <input type="text" value="${street.name}" class="street-name-input w-full flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Nome da Rua">
+                        <button type="button" class="delete-street-btn bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>
+                    <div>
+                        <textarea class="street-houses-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" rows="3" placeholder="Números das casas, separados por vírgula (Ex: 10, 25B, 40)">${street.houses}</textarea>
+                    </div>
+                    <div>
+                        <input type="url" value="${street.mapLink || ''}" class="street-map-link-input mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Link do Google Maps (opcional)">
+                    </div>
+                `;
+                div.querySelector('.delete-street-btn').addEventListener('click', () => div.remove());
+                return div;
+            }
+
+            function createBlockInputRow(block = { name: '', streets: [] }) {
+                const div = document.createElement('div');
+                div.className = 'p-4 bg-gray-50 rounded-lg border';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 mb-3">
+                        <input type="text" value="${block.name}" class="block-name-input w-full flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-lg font-semibold" placeholder="Nome da Quadra (Ex: A)">
+                        <button type="button" class="delete-block-btn bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors flex-shrink-0">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>
+                    <div class="streets-list space-y-3"></div>
+                    <button type="button" class="add-street-btn mt-3 bg-blue-500 text-white font-semibold py-2 px-3 rounded-lg hover:bg-blue-600 text-sm">Adicionar Rua</button>
+                `;
+                const streetsList = div.querySelector('.streets-list');
+                if (block.streets) {
+                    block.streets.forEach(street => streetsList.appendChild(createStreetInputRow(street)));
+                }
+                div.querySelector('.delete-block-btn').addEventListener('click', () => div.remove());
+                div.querySelector('.add-street-btn').addEventListener('click', (e) => {
+                    e.target.previousElementSibling.appendChild(createStreetInputRow());
+                });
+                return div;
+            }
+
+            function openEditModal(territoryId) {
+                const data = localTerritoryData[territoryId];
+                modalTitle.textContent = `Editar Território ${String(territoryId).padStart(2, '0')}`;
+                territoryNameInput.value = data.name;
+                blocksList.innerHTML = '';
+                if (data.blocks) {
+                    data.blocks.forEach(block => {
+                        blocksList.appendChild(createBlockInputRow(block));
+                    });
+                }
+                saveBtn.dataset.territoryId = territoryId;
+                editModal.classList.remove('hidden');
+            }
+
+            function closeEditModal() {
+                editModal.classList.add('hidden');
+            }
+            
+            // --- Event Listeners ---
+            grid.addEventListener('click', (e) => {
+                const editButton = e.target.closest('.edit-territory-btn');
+                if (editButton) {
+                    openEditModal(editButton.dataset.territoryId);
+                }
+
+                const infoButton = e.target.closest('.info-btn');
+                if (infoButton) {
+                    openInfoModal(infoButton.dataset.territoryId);
+                }
+            });
+
+            addBlockBtn.addEventListener('click', () => {
+                blocksList.appendChild(createBlockInputRow());
+            });
+
+            saveBtn.addEventListener('click', async () => {
+                const territoryId = saveBtn.dataset.territoryId;
+                const newBlocks = [];
+                const blockRows = blocksList.querySelectorAll('.p-4.bg-gray-50');
+                
+                blockRows.forEach(blockRow => {
+                    const blockNameInput = blockRow.querySelector('.block-name-input');
+                    if (!blockNameInput.value.trim()) return;
+
+                    const newStreets = [];
+                    const streetRows = blockRow.querySelectorAll('.p-3.bg-gray-100');
+                    streetRows.forEach(streetRow => {
+                        const streetNameInput = streetRow.querySelector('.street-name-input');
+                        const streetHousesInput = streetRow.querySelector('.street-houses-input');
+                        const streetMapLinkInput = streetRow.querySelector('.street-map-link-input');
+                        if (streetNameInput.value.trim()) {
+                            newStreets.push({
+                                name: streetNameInput.value.trim(),
+                                houses: streetHousesInput.value.trim(),
+                                mapLink: streetMapLinkInput.value.trim()
+                            });
+                        }
+                    });
+
+                    newBlocks.push({
+                        name: blockNameInput.value.trim(),
+                        streets: newStreets
+                    });
+                });
+
+                const updatedData = {
+                    name: territoryNameInput.value.trim(),
+                    blocks: newBlocks
+                };
+
+                const docRef = doc(db, "territories", territoryId);
+                try {
+                    await setDoc(docRef, updatedData, { merge: true });
+                } catch (error) {
+                    console.error("Error updating document: ", error);
+                }
+                
+                closeEditModal();
+            });
+
+            closeModalBtn.addEventListener('click', closeEditModal);
+            cancelBtn.addEventListener('click', closeEditModal);
+            editModal.addEventListener('click', (e) => {
+                if (e.target === editModal) closeEditModal();
+            });
+
+            closeInfoModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+            infoModal.addEventListener('click', (e) => {
+                if(e.target === infoModal) infoModal.classList.add('hidden');
+            });
+
+        });
+    </script>
+
+</body>
+</html>
+
