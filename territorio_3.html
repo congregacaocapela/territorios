@@ -3,88 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- O TÍTULO SERÁ ATUALIZADO AUTOMATICAMENTE PELO SCRIPT -->
     <title>Gestão do Território</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .progress-ring__circle {
-            transition: stroke-dashoffset 0.35s;
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
+        body { font-family: 'Inter', sans-serif; background-color: #f7fafc; }
+        .house-box {
+            transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .house-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-
-    <!-- Barra de Navegação Superior -->
-    <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-40">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="gestaodequadras.html" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
-                &larr; Voltar à Gestão
-            </a>
-            <!-- O TÍTULO DA NAVEGAÇÃO SERÁ ATUALIZADO AUTOMATICAMENTE -->
-            <h1 id="nav-title" class="text-lg sm:text-xl font-bold">Carregando...</h1>
-            <div></div> <!-- Espaçador -->
-        </div>
-    </nav>
+<body class="text-gray-800">
 
     <!-- Container da Aplicação -->
-    <div class="container mx-auto p-4 sm:p-8">
-        
-        <header class="text-center mb-8">
-            <!-- O CABEÇALHO PRINCIPAL SERÁ ATUALIZADO AUTOMATICAMENTE -->
-            <h1 id="main-header" class="text-3xl sm:text-4xl font-bold text-gray-900">Carregando...</h1>
-        </header>
-
-        <!-- Grelha de Quadras -->
-        <div id="blocks-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <!-- Adicione os cartões das quadras deste território aqui -->
-            <p class="text-gray-500 col-span-full text-center">Adicione as quadras para este território aqui.</p>
+    <div id="app-container" class="container mx-auto max-w-lg">
+        <!-- O conteúdo dinâmico será renderizado aqui -->
+    </div>
+    
+    <!-- Modal de Imagem do Mapa -->
+    <div id="map-image-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-4">
+        <div class="relative bg-white p-2 rounded-lg shadow-xl">
+            <button id="close-map-modal-btn" class="absolute -top-4 -right-4 text-white bg-gray-800 rounded-full h-10 w-10 flex items-center justify-center text-2xl z-10">&times;</button>
+            <img id="modal-map-image" src="" alt="Mapa do Território" class="max-w-full max-h-[85vh] rounded">
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- PASSO 1: ALTERE O NÚMERO ABAIXO PARA O NÚMERO DO TERRITÓRIO ---
-            // Por exemplo, para o arquivo "territorio_2.html", use o número 2.
-            // Para "territorio_15.html", use 15.
-            const TERRITORY_ID = '3'; // <-- MUDE AQUI
+    <!-- Modal de Confirmação -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <h2 id="confirmation-modal-title" class="text-xl font-bold mb-4">Confirmar Ação</h2>
+            <p id="confirmation-modal-text" class="text-gray-600 mb-6">Você tem certeza?</p>
+            <div class="flex justify-center gap-4">
+                <button id="cancel-action-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300">Cancelar</button>
+                <button id="confirm-action-btn" class="bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-600">Confirmar</button>
+            </div>
+        </div>
+    </div>
 
-            // --- PASSO 2: NÃO É NECESSÁRIO ALTERAR MAIS NADA ABAIXO ---
-            // O script fará o resto automaticamente.
 
-            const STORAGE_KEY = 'territoryNames';
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-            const navTitle = document.getElementById('nav-title');
-            const mainHeader = document.getElementById('main-header');
+        const TERRITORY_ID = "3";
 
-            if (TERRITORY_ID === 'XX') {
-                 mainHeader.textContent = 'ERRO: Defina o ID do Território no script!';
-                 mainHeader.classList.add('text-red-500');
-                 return;
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
+            authDomain: "quadrascasas.firebaseapp.com",
+            projectId: "quadrascasas",
+            storageBucket: "quadrascasas.firebasestorage.app",
+            messagingSenderId: "1088979227180",
+            appId: "1:1088979227180:web:fbf72a87b811236efeb789",
+            measurementId: "G-YEQ216076G"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch(error) {
+                document.getElementById('app-container').innerHTML = `<p class="text-red-500 text-center p-4">Erro de autenticação.</p>`;
+                console.error("Authentication failed:", error);
+                return;
             }
 
-            function loadAndApplyTerritoryName() {
-                const savedNamesJSON = localStorage.getItem(STORAGE_KEY);
-                let territoryName = `Território ${String(TERRITORY_ID).padStart(2, '0')}`; // Nome padrão
+            const appContainer = document.getElementById('app-container');
+            const confirmationModal = document.getElementById('confirmation-modal');
+            const confirmActionBtn = document.getElementById('confirm-action-btn');
+            const cancelActionBtn = document.getElementById('cancel-action-btn');
+            const confirmationModalText = document.getElementById('confirmation-modal-text');
+            
+            const mapImageModal = document.getElementById('map-image-modal');
+            const modalMapImage = document.getElementById('modal-map-image');
+            const closeMapModalBtn = document.getElementById('close-map-modal-btn');
 
-                if (savedNamesJSON) {
-                    const savedNames = JSON.parse(savedNamesJSON);
-                    if (savedNames[TERRITORY_ID]) {
-                        territoryName = savedNames[TERRITORY_ID];
-                    }
+            const territoryDocRef = doc(db, "territories", TERRITORY_ID);
+            let currentTerritoryData = {};
+
+            onSnapshot(territoryDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    currentTerritoryData = docSnap.data();
+                    handleRouteChange();
+                } else {
+                    appContainer.innerHTML = `<p class="text-center p-4">Território ${TERRITORY_ID} não encontrado.</p>`;
+                }
+            });
+
+            function handleRouteChange() {
+                const hash = window.location.hash.substring(1);
+                const [blockName, streetName] = hash.split('&').map(decodeURIComponent);
+
+                if (blockName && streetName) {
+                    renderStreetView(blockName, streetName, currentTerritoryData);
+                } else if (blockName) {
+                    renderBlockView(blockName, currentTerritoryData);
+                }
+                else {
+                    renderListView(currentTerritoryData);
+                }
+            }
+
+            function renderListView(data) {
+                const territoryName = data.name || `Território ${TERRITORY_ID}`;
+                document.title = `Gestão: ${territoryName}`;
+
+                let blocksHtml = '';
+                if (data.blocks && data.blocks.length > 0) {
+                     blocksHtml = data.blocks.map(block => {
+                        return `
+                             <a href="#${encodeURIComponent(block.name)}" class="block-link flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-xl">Quadra ${block.name}</h3>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                            </a>
+                        `;
+                    }).join('');
+                } else {
+                    blocksHtml = '<p class="text-gray-500 text-center col-span-full">Nenhuma quadra adicionada a este território ainda.</p>';
                 }
                 
-                // Atualiza os elementos na página
-                const formattedTitle = `${String(TERRITORY_ID).padStart(2, '0')} - ${territoryName}`;
-                document.title = `Gestão: ${territoryName}`;
-                navTitle.textContent = territoryName;
-                mainHeader.textContent = formattedTitle;
+                appContainer.innerHTML = `
+                    <div class="p-4">
+                         <div class="bg-blue-100 text-blue-800 p-4 rounded-xl mb-6 flex justify-between items-start">
+                            <div>
+                                <h1 class="text-xl font-bold">Olá Publicador(a),</h1>
+                                <p class="text-sm">Preencha as casas da quadra onde você falou!</p>
+                                <p class="font-bold mt-2">${TERRITORY_ID} - ${territoryName}</p>
+                            </div>
+                            <svg id="territory-map-icon" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                        </div>
+                        <div class="space-y-3">
+                            ${blocksHtml}
+                        </div>
+                    </div>`;
             }
 
-            loadAndApplyTerritoryName();
+            function renderBlockView(blockName, data) {
+                 const territoryName = data.name || `Território ${TERRITORY_ID}`;
+                 const block = data.blocks?.find(b => b.name === blockName);
+
+                if (!block) {
+                    window.location.hash = '';
+                    return;
+                }
+
+                document.title = `Quadra ${blockName} - ${territoryName}`;
+
+                const streetsHtml = block.streets.map(street => {
+                    const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
+                    const range = houseNumbers.length > 1 ? `${houseNumbers[0]} à ${houseNumbers[houseNumbers.length - 1]}` : (houseNumbers.length === 1 ? `Nº ${houseNumbers[0]}` : 'Nenhum número');
+                    
+                    const mapLinkIcon = street.mapLink 
+                        ? `<a href="${street.mapLink}" target="_blank" rel="noopener noreferrer" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300 transition-colors">
+                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                           </a>`
+                        : `<div class="bg-gray-200 p-3 rounded-lg">
+                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                           </div>`;
+
+                    return `
+                        <div class="flex items-center bg-white p-2 rounded-xl shadow-sm gap-2">
+                           ${mapLinkIcon}
+                           <a href="#${encodeURIComponent(block.name)}&${encodeURIComponent(street.name)}" class="street-link flex-grow flex justify-between items-center p-2">
+                                <div>
+                                    <h3 class="font-bold text-lg">${street.name}</h3>
+                                    <p class="text-sm text-gray-500">Nº de ${range}</p>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                           </a>
+                        </div>`;
+                }).join('');
+
+                 appContainer.innerHTML = `
+                    <div class="bg-blue-100 text-blue-800 p-4 rounded-b-2xl shadow-md relative">
+                         <a href="#" class="absolute top-4 left-4 text-blue-800">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                        </a>
+                        <div class="text-center">
+                            <h1 class="text-xl font-bold">${territoryName}</h1>
+                            <p>Quadra ${block.name}</p>
+                        </div>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        ${streetsHtml}
+                    </div>
+                 `;
+            }
+
+            function renderStreetView(blockName, streetName, data) {
+                const block = data.blocks?.find(b => b.name === blockName);
+                const street = block?.streets?.find(s => s.name === streetName);
+
+                if (!street) {
+                    window.location.hash = encodeURIComponent(blockName);
+                    return;
+                }
+                
+                document.title = `${streetName} - Quadra ${blockName}`;
+                
+                const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
+
+                const housesGridHtml = houseNumbers.map(num => {
+                    const isCompleted = data.status?.[blockName]?.[streetName]?.[num] || false;
+                    return `
+                        <div class="house-box w-full aspect-square flex items-center justify-center text-lg font-bold rounded-lg cursor-pointer ${isCompleted ? 'bg-green-500 text-white' : 'bg-white text-gray-800'}" data-house-number="${num}">
+                            ${num}
+                        </div>`;
+                }).join('');
+                
+                appContainer.innerHTML = `
+                    <div class="bg-blue-100 text-blue-800 p-4 rounded-b-2xl shadow-md relative">
+                        <a href="#${encodeURIComponent(blockName)}" class="absolute top-4 left-4 text-blue-800">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                        </a>
+                        <div class="text-center">
+                            <h1 class="text-xl font-bold">${data.name}</h1>
+                            <p>${street.name}</p>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h2 class="font-bold text-gray-500 my-4">CASAS</h2>
+                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">
+                            ${housesGridHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
+            function showConfirmationModal(blockName, streetName, houseNumber) {
+                const isCompleted = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || false;
+                confirmationModalText.textContent = isCompleted 
+                    ? `Deseja desmarcar a casa ${houseNumber} como visitada?`
+                    : `Deseja marcar a casa ${houseNumber} como visitada?`;
+
+                confirmActionBtn.dataset.blockName = blockName;
+                confirmActionBtn.dataset.streetName = streetName;
+                confirmActionBtn.dataset.houseNumber = houseNumber;
+                confirmationModal.classList.remove('hidden');
+            }
+
+            function closeConfirmationModal() {
+                confirmationModal.classList.add('hidden');
+            }
+            
+            async function toggleHouseStatus(blockName, streetName, houseNumber) {
+                const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || false;
+                const newStatus = !currentStatus;
+                
+                const updatePayload = {
+                    status: {
+                        ...currentTerritoryData.status,
+                        [blockName]: {
+                            ...(currentTerritoryData.status?.[blockName] || {}),
+                            [streetName]: {
+                                ...(currentTerritoryData.status?.[blockName]?.[streetName] || {}),
+                                [houseNumber]: newStatus
+                            }
+                        }
+                    }
+                };
+                await setDoc(territoryDocRef, updatePayload, { merge: true });
+            }
+
+            appContainer.addEventListener('click', (e) => {
+                const houseBox = e.target.closest('.house-box');
+                if (houseBox) {
+                    const [blockName, streetName] = window.location.hash.substring(1).split('&').map(decodeURIComponent);
+                    const houseNumber = houseBox.dataset.houseNumber;
+                    showConfirmationModal(blockName, streetName, houseNumber);
+                }
+                
+                if (e.target.closest('#territory-map-icon')) {
+                     // --- ADICIONE O URL DA IMAGEM DO MAPA AQUI ---
+                    const mapImageUrl = "https://lh3.googleusercontent.com/pw/AP1GczMA-1uJ1sRikZ9Z_TkK68n_ua6sv1cvLrnMR0keYtkDgQUBCDS3tFgmsiuwmo-Bja7gPJb5_BbK-RdjLhO3vdjsAPfR4Kt415-fvmgDGWe7av-86OQPL0ZZeaSzqD7TTNHPpIbmiRDAcko6T7rP1jqU=w1229-h869-s-no-gm?authuser=1"; 
+                    modalMapImage.src = mapImageUrl;
+                    mapImageModal.classList.remove('hidden');
+                }
+            });
+            
+            closeMapModalBtn.addEventListener('click', () => mapImageModal.classList.add('hidden'));
+            mapImageModal.addEventListener('click', (e) => {
+                if (e.target === mapImageModal) {
+                    mapImageModal.classList.add('hidden');
+                }
+            });
+            
+            confirmActionBtn.addEventListener('click', async () => {
+                const { blockName, streetName, houseNumber } = confirmActionBtn.dataset;
+                await toggleHouseStatus(blockName, streetName, houseNumber);
+                closeConfirmationModal();
+            });
+            cancelActionBtn.addEventListener('click', closeConfirmationModal);
+            confirmationModal.addEventListener('click', (e) => {
+                if (e.target === confirmationModal) closeConfirmationModal();
+            });
+
+            window.addEventListener('hashchange', handleRouteChange);
+            handleRouteChange();
         });
     </script>
 
