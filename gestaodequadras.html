@@ -26,13 +26,18 @@
     <!-- Barra de Navegação Superior -->
     <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-40">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="paineldecontrole.html" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
+            <a href="index.html" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
                 Início
             </a>
             <h1 class="text-lg sm:text-xl font-bold">Gestão de Territórios</h1>
-            <button id="report-icon-btn" class="text-white hover:text-gray-300 p-2 rounded-full">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            </button>
+            <div class="flex items-center gap-2">
+                <button id="report-icon-btn" class="text-white hover:text-gray-300 p-2 rounded-full" title="Gerar Relatório">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                </button>
+                 <button id="reset-icon-btn" class="text-white hover:text-gray-300 p-2 rounded-full" title="Zerar Progresso">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -48,6 +53,30 @@
             <!-- Os cartões de território serão gerados aqui via JS -->
         </div>
     </div>
+    
+    <!-- Modal de Reset de Territórios -->
+    <div id="reset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-red-600">Zerar Progresso</h2>
+                <button id="close-reset-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <p class="text-gray-600 mb-4">Esta ação irá limpar o status de todas as casas marcadas nos territórios selecionados. <strong>Esta ação não pode ser desfeita.</strong></p>
+            <div class="space-y-4">
+                <div>
+                    <label for="reset-territory-selection-input" class="block text-sm font-medium text-gray-700">Territórios a zerar (ex: 1, 3-5, 8)</label>
+                    <input type="text" id="reset-territory-selection-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" value="1-46">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button id="confirm-reset-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-red-700 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                    <span id="confirm-reset-btn-text">Zerar Progresso</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Modal de Geração de Relatório -->
     <div id="report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
@@ -134,7 +163,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch, getDoc, deleteField, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
@@ -179,6 +208,11 @@
             const reportIconBtn = document.getElementById('report-icon-btn');
             const closeReportModalBtn = document.getElementById('close-report-modal-btn');
             const generateCsvBtn = document.getElementById('generate-csv-btn');
+
+            const resetModal = document.getElementById('reset-modal');
+            const resetIconBtn = document.getElementById('reset-icon-btn');
+            const closeResetModalBtn = document.getElementById('close-reset-modal-btn');
+            const confirmResetBtn = document.getElementById('confirm-reset-btn');
 
             let localTerritoryData = {};
             const territoriesColRef = collection(db, "territories");
@@ -473,13 +507,46 @@
                 }
             }
 
+            async function resetTerritories() {
+                const selectionInput = document.getElementById('reset-territory-selection-input').value;
+                const territoryIds = parseTerritorySelection(selectionInput);
+
+                if (territoryIds.length === 0) {
+                    alert('Por favor, insira uma seleção válida de territórios.');
+                    return;
+                }
+
+                const btn = document.getElementById('confirm-reset-btn');
+                const btnText = document.getElementById('confirm-reset-btn-text');
+                btn.disabled = true;
+                btnText.textContent = 'Zerando...';
+
+                const batch = writeBatch(db);
+
+                territoryIds.forEach(id => {
+                    const docRef = doc(db, "territories", String(id));
+                    batch.update(docRef, { status: deleteField() });
+                });
+
+                try {
+                    await batch.commit();
+                    alert(`Progresso de ${territoryIds.length} territórios zerado com sucesso!`);
+                } catch (err) {
+                    console.error("Erro ao zerar territórios:", err);
+                    alert("Ocorreu um erro ao zerar o progresso. Tente novamente.");
+                } finally {
+                    btn.disabled = false;
+                    btnText.textContent = 'Zerar Progresso';
+                    resetModal.classList.add('hidden');
+                }
+            }
+
             // --- Event Listeners ---
             grid.addEventListener('click', (e) => {
                 const editButton = e.target.closest('.edit-territory-btn');
                 if (editButton) {
                     openEditModal(editButton.dataset.territoryId);
                 }
-
                 const infoButton = e.target.closest('.info-btn');
                 if (infoButton) {
                     openInfoModal(infoButton.dataset.territoryId);
@@ -492,6 +559,14 @@
                 if(e.target === reportModal) reportModal.classList.add('hidden');
             });
             generateCsvBtn.addEventListener('click', generateReport);
+            
+            resetIconBtn.addEventListener('click', () => resetModal.classList.remove('hidden'));
+            closeResetModalBtn.addEventListener('click', () => resetModal.classList.add('hidden'));
+            resetModal.addEventListener('click', (e) => {
+                if (e.target === resetModal) resetModal.classList.add('hidden');
+            });
+            confirmResetBtn.addEventListener('click', resetTerritories);
+
 
             addBlockBtn.addEventListener('click', () => {
                 blocksList.appendChild(createBlockInputRow());
