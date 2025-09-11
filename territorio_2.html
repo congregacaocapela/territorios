@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão do Território</title>
+    <title>Gestão do Território 01</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f7fafc; }
+        #app-container { padding-bottom: 120px; /* Space for the legend */ }
         .house-box {
             transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -16,15 +17,42 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
+        .notification {
+            transition: opacity 0.5s, transform 0.5s;
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .legend {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
     </style>
 </head>
 <body class="text-gray-800">
 
+    <!-- Notification Container -->
+    <div id="notification-container" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+
     <!-- Container da Aplicação -->
-    <div id="app-container" class="container mx-auto max-w-lg">
-        <!-- O conteúdo dinâmico será renderizado aqui -->
-    </div>
+    <div id="app-container" class="container mx-auto max-w-lg"></div>
     
+    <!-- Legenda Fixa -->
+    <div id="legend-container" class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg z-40 hidden">
+         <div class="container mx-auto max-w-lg">
+            <div class="grid gap-x-6 gap-y-2 legend">
+                <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-blue-600 mr-2"></span><span>Casa Feita</span></div>
+                <div class="flex items-center"><span class="w-4 h-4 rounded-full bg-red-500 mr-2"></span><span>Não Bater</span></div>
+                <div class="flex items-center"><span class="font-bold w-4 text-center mr-2">F</span><span>Fundo</span></div>
+                <div class="flex items-center"><span class="font-bold w-4 text-center mr-2">T</span><span>Terreno</span></div>
+                <div class="flex items-center"><span class="font-bold w-4 text-center mr-2">C</span><span>Comércio</span></div>
+                <div class="flex items-center whitespace-nowrap"><span class="font-bold w-auto text-center mr-2">JW</span><span>T. de Jeová</span></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Imagem do Mapa -->
     <div id="map-image-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-4">
         <div class="relative bg-white p-2 rounded-lg shadow-xl">
@@ -36,7 +64,7 @@
     <!-- Modal de Confirmação -->
     <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-            <h2 id="confirmation-modal-title" class="text-xl font-bold mb-4">Confirmar Ação</h2>
+            <h2 class="text-xl font-bold mb-4">Confirmar Ação</h2>
             <p id="confirmation-modal-text" class="text-gray-600 mb-6">Você tem certeza?</p>
             <div class="flex justify-center gap-4">
                 <button id="cancel-action-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300">Cancelar</button>
@@ -45,11 +73,10 @@
         </div>
     </div>
 
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const TERRITORY_ID = "2";
 
@@ -81,10 +108,13 @@
             const confirmActionBtn = document.getElementById('confirm-action-btn');
             const cancelActionBtn = document.getElementById('cancel-action-btn');
             const confirmationModalText = document.getElementById('confirmation-modal-text');
+            const legendContainer = document.getElementById('legend-container');
             
             const mapImageModal = document.getElementById('map-image-modal');
             const modalMapImage = document.getElementById('modal-map-image');
             const closeMapModalBtn = document.getElementById('close-map-modal-btn');
+            
+            const notificationContainer = document.getElementById('notification-container');
 
             const territoryDocRef = doc(db, "territories", TERRITORY_ID);
             let currentTerritoryData = {};
@@ -97,155 +127,137 @@
                     appContainer.innerHTML = `<p class="text-center p-4">Território ${TERRITORY_ID} não encontrado.</p>`;
                 }
             });
+            
+            function showNotification(message, type = 'success') {
+                const notif = document.createElement('div');
+                let bgColor = 'bg-green-500';
+                if (type === 'error') bgColor = 'bg-red-500';
+                if (type === 'info') bgColor = 'bg-yellow-500';
+
+                notif.className = `notification ${bgColor} text-white py-2 px-4 rounded-lg shadow-md`;
+                notif.textContent = message;
+                
+                notificationContainer.appendChild(notif);
+                setTimeout(() => { notif.classList.add('show'); }, 10);
+                setTimeout(() => {
+                    notif.classList.remove('show');
+                    notif.addEventListener('transitionend', () => notif.remove());
+                }, 3000);
+            }
 
             function handleRouteChange() {
                 const hash = window.location.hash.substring(1);
                 const [blockName, streetName] = hash.split('&').map(decodeURIComponent);
 
                 if (blockName && streetName) {
+                    legendContainer.classList.remove('hidden');
                     renderStreetView(blockName, streetName, currentTerritoryData);
-                } else if (blockName) {
-                    renderBlockView(blockName, currentTerritoryData);
-                }
-                else {
-                    renderListView(currentTerritoryData);
+                } else {
+                    legendContainer.classList.add('hidden');
+                    if (blockName) {
+                        renderBlockView(blockName, currentTerritoryData);
+                    } else {
+                        renderListView(currentTerritoryData);
+                    }
                 }
             }
 
             function renderListView(data) {
                 const territoryName = data.name || `Território ${TERRITORY_ID}`;
                 document.title = `Gestão: ${territoryName}`;
-
-                let blocksHtml = '';
-                if (data.blocks && data.blocks.length > 0) {
-                     blocksHtml = data.blocks.map(block => {
-                        return `
-                             <a href="#${encodeURIComponent(block.name)}" class="block-link flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                                <div class="flex-1">
-                                    <h3 class="font-bold text-xl">Quadra ${block.name}</h3>
-                                </div>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                            </a>
-                        `;
-                    }).join('');
-                } else {
-                    blocksHtml = '<p class="text-gray-500 text-center col-span-full">Nenhuma quadra adicionada a este território ainda.</p>';
-                }
+                let blocksHtml = data.blocks?.map(block => `
+                     <a href="#${encodeURIComponent(block.name)}" class="block-link flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex-1"><h3 class="font-bold text-xl">Quadra ${block.name}</h3></div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                    </a>`).join('') || '<p class="text-gray-500 text-center col-span-full">Nenhuma quadra adicionada.</p>';
                 
                 appContainer.innerHTML = `
                     <div class="p-4">
-                         <div class="bg-blue-100 text-blue-800 p-4 rounded-xl mb-6 flex justify-between items-start">
+                         <div class="bg-blue-100 text-blue-800 p-6 rounded-2xl mb-6 flex justify-between items-start shadow-sm">
                             <div>
-                                <h1 class="text-xl font-bold">Olá Publicador(a),</h1>
-                                <p class="text-sm">Preencha as casas da quadra onde você falou!</p>
-                                <p class="font-bold mt-2">${TERRITORY_ID} - ${territoryName}</p>
+                                <h1 class="text-2xl font-bold">Olá Publicador(a),</h1>
+                                <p>Preencha as casas da quadra onde você falou!</p>
+                                <p class="font-bold mt-3 text-lg">${TERRITORY_ID} - ${territoryName}</p>
                             </div>
-                            <svg id="territory-map-icon" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-500 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                            <svg id="territory-map-icon" xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500 cursor-pointer flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
                         </div>
-                        <div class="space-y-3">
-                            ${blocksHtml}
-                        </div>
+                        <div class="space-y-3">${blocksHtml}</div>
                     </div>`;
             }
 
             function renderBlockView(blockName, data) {
                  const territoryName = data.name || `Território ${TERRITORY_ID}`;
                  const block = data.blocks?.find(b => b.name === blockName);
-
-                if (!block) {
-                    window.location.hash = '';
-                    return;
-                }
-
+                if (!block) { window.location.hash = ''; return; }
                 document.title = `Quadra ${blockName} - ${territoryName}`;
 
                 const streetsHtml = block.streets.map(street => {
                     const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
                     const range = houseNumbers.length > 1 ? `${houseNumbers[0]} à ${houseNumbers[houseNumbers.length - 1]}` : (houseNumbers.length === 1 ? `Nº ${houseNumbers[0]}` : 'Nenhum número');
-                    
                     const mapLinkIcon = street.mapLink 
-                        ? `<a href="${street.mapLink}" target="_blank" rel="noopener noreferrer" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300 transition-colors">
-                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                           </a>`
-                        : `<div class="bg-gray-200 p-3 rounded-lg">
-                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                           </div>`;
-
-                    return `
-                        <div class="flex items-center bg-white p-2 rounded-xl shadow-sm gap-2">
-                           ${mapLinkIcon}
-                           <a href="#${encodeURIComponent(block.name)}&${encodeURIComponent(street.name)}" class="street-link flex-grow flex justify-between items-center p-2">
-                                <div>
-                                    <h3 class="font-bold text-lg">${street.name}</h3>
-                                    <p class="text-sm text-gray-500">Nº de ${range}</p>
-                                </div>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                           </a>
-                        </div>`;
+                        ? `<a href="${street.mapLink}" target="_blank" rel="noopener noreferrer" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></a>`
+                        : `<div class="bg-gray-200 p-3 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>`;
+                    return `<div class="flex items-center bg-white p-2 rounded-xl shadow-sm gap-2">${mapLinkIcon}<a href="#${encodeURIComponent(block.name)}&${encodeURIComponent(street.name)}" class="street-link flex-grow flex justify-between items-center p-2"><div><h3 class="font-bold text-lg">${street.name}</h3><p class="text-sm text-gray-500">Nº de ${range}</p></div><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></a></div>`;
                 }).join('');
 
                  appContainer.innerHTML = `
-                    <div class="bg-blue-100 text-blue-800 p-4 rounded-b-2xl shadow-md relative">
-                         <a href="#" class="absolute top-4 left-4 text-blue-800">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                        </a>
+                    <div class="bg-blue-100 text-blue-800 p-6 rounded-b-3xl shadow-lg relative">
+                         <a href="#" class="absolute top-0 left-0 h-full px-5 flex items-center text-blue-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
                         <div class="text-center">
-                            <h1 class="text-xl font-bold">${territoryName}</h1>
-                            <p>Quadra ${block.name}</p>
+                            <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${territoryName}</h1>
+                            <p class="text-xl">Quadra ${block.name}</p>
                         </div>
                     </div>
-                    <div class="p-4 space-y-3">
-                        ${streetsHtml}
-                    </div>
-                 `;
+                    <div class="p-4 space-y-3">${streetsHtml}</div>`;
             }
 
+            function getStatusStyle(status) {
+                switch (status) {
+                    case 'DONE': return 'bg-blue-600 text-white';
+                    case 'DND': return 'bg-red-500 text-white';
+                    case 'F':
+                    case 'T':
+                    case 'C':
+                    case 'JW': return 'bg-gray-200 text-gray-800';
+                    default: return 'bg-white text-gray-800';
+                }
+            }
+            
             function renderStreetView(blockName, streetName, data) {
                 const block = data.blocks?.find(b => b.name === blockName);
                 const street = block?.streets?.find(s => s.name === streetName);
-
-                if (!street) {
-                    window.location.hash = encodeURIComponent(blockName);
-                    return;
-                }
-                
+                if (!street) { window.location.hash = encodeURIComponent(blockName); return; }
                 document.title = `${streetName} - Quadra ${blockName}`;
                 
                 const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
-
                 const housesGridHtml = houseNumbers.map(num => {
-                    const isCompleted = data.status?.[blockName]?.[streetName]?.[num] || false;
-                    return `
-                        <div class="house-box w-full aspect-square flex items-center justify-center text-lg font-bold rounded-lg cursor-pointer ${isCompleted ? 'bg-green-500 text-white' : 'bg-white text-gray-800'}" data-house-number="${num}">
-                            ${num}
-                        </div>`;
+                    const status = data.status?.[blockName]?.[streetName]?.[num] || null;
+                    const styleClass = getStatusStyle(status);
+                    const content = ['F', 'T', 'C', 'JW'].includes(status) ? status : num;
+                    return `<div class="house-box w-full aspect-square flex items-center justify-center text-lg font-bold rounded-lg cursor-pointer ${styleClass}" data-house-number="${num}">${content}</div>`;
                 }).join('');
                 
                 appContainer.innerHTML = `
-                    <div class="bg-blue-100 text-blue-800 p-4 rounded-b-2xl shadow-md relative">
-                        <a href="#${encodeURIComponent(blockName)}" class="absolute top-4 left-4 text-blue-800">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                        </a>
+                    <div class="bg-blue-100 text-blue-800 p-6 rounded-b-3xl shadow-lg relative">
+                        <a href="#${encodeURIComponent(blockName)}" class="absolute top-0 left-0 h-full px-5 flex items-center text-blue-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
                         <div class="text-center">
-                            <h1 class="text-xl font-bold">${data.name}</h1>
-                            <p>${street.name}</p>
+                            <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${data.name}</h1>
+                            <p class="text-xl">Quadra ${blockName}</p>
+                            <p>${streetName}</p>
                         </div>
                     </div>
                     <div class="p-4">
                         <h2 class="font-bold text-gray-500 my-4">CASAS</h2>
-                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">
-                            ${housesGridHtml}
-                        </div>
-                    </div>
-                `;
+                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">${housesGridHtml}</div>
+                    </div>`;
             }
 
             function showConfirmationModal(blockName, streetName, houseNumber) {
-                const isCompleted = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || false;
-                confirmationModalText.textContent = isCompleted 
-                    ? `Deseja desmarcar a casa ${houseNumber} como visitada?`
-                    : `Deseja marcar a casa ${houseNumber} como visitada?`;
-
+                const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || null;
+                const isDone = currentStatus === 'DONE';
+                confirmationModalText.textContent = isDone 
+                    ? `Deseja desmarcar a casa ${houseNumber} como feita?`
+                    : `Deseja marcar a casa ${houseNumber} como feita?`;
                 confirmActionBtn.dataset.blockName = blockName;
                 confirmActionBtn.dataset.streetName = streetName;
                 confirmActionBtn.dataset.houseNumber = houseNumber;
@@ -256,23 +268,31 @@
                 confirmationModal.classList.add('hidden');
             }
             
-            async function toggleHouseStatus(blockName, streetName, houseNumber) {
-                const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || false;
-                const newStatus = !currentStatus;
+            async function setHouseStatus(blockName, streetName, houseNumber, status) {
+                const path = `status.${blockName}.${streetName}.${houseNumber}`;
+                const docRef = territoryDocRef;
                 
-                const updatePayload = {
-                    status: {
-                        ...currentTerritoryData.status,
-                        [blockName]: {
-                            ...(currentTerritoryData.status?.[blockName] || {}),
-                            [streetName]: {
-                                ...(currentTerritoryData.status?.[blockName]?.[streetName] || {}),
-                                [houseNumber]: newStatus
-                            }
-                        }
+                try {
+                    if (status === null) {
+                        await updateDoc(docRef, { [path]: deleteField() });
+                    } else {
+                        await updateDoc(docRef, { [path]: status });
                     }
-                };
-                await setDoc(territoryDocRef, updatePayload, { merge: true });
+                } catch(error) {
+                     console.error("Erro ao salvar status:", error);
+                     // Se o erro for por aninhamento, tenta criar o objeto pai
+                    if (error.code === 'invalid-argument') {
+                         await setDoc(docRef, { status: { [blockName]: { [streetName]: { [houseNumber]: status } } } }, { merge: true });
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+
+            async function toggleDoneStatus(blockName, streetName, houseNumber) {
+                const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || null;
+                const newStatus = currentStatus === 'DONE' ? null : 'DONE';
+                await setHouseStatus(blockName, streetName, houseNumber, newStatus);
             }
 
             appContainer.addEventListener('click', (e) => {
@@ -280,34 +300,56 @@
                 if (houseBox) {
                     const [blockName, streetName] = window.location.hash.substring(1).split('&').map(decodeURIComponent);
                     const houseNumber = houseBox.dataset.houseNumber;
+                    const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || null;
+
+                    if (currentStatus === 'DND') {
+                        showNotification('Esta casa não deve ser trabalhada.', 'info');
+                        return;
+                    }
                     showConfirmationModal(blockName, streetName, houseNumber);
                 }
-                
                 if (e.target.closest('#territory-map-icon')) {
-                     // --- ADICIONE O URL DA IMAGEM DO MAPA AQUI ---
-                    const mapImageUrl = "https://lh3.googleusercontent.com/pw/AP1GczNRaQnbqF9C-m7VAPP0Xw_IPVI3G05DSVpjckw3J3u5jQfd3KQMiPhHCS_7jKBOnivtMIug2TXO-RYVF-WKnYFlAfiaNjljTiZMeRbQEWP_gho7l5Rt2WLMC0TbwVzQjDwBkJrFoXiEM9nWwE_67iwN=w1229-h869-s-no-gm?authuser=1"; 
-                    modalMapImage.src = mapImageUrl;
+                    const baseImageName = `territorio${TERRITORY_ID}`;
+                    modalMapImage.src = `${baseImageName}.jpg`; // Tenta carregar JPG primeiro
                     mapImageModal.classList.remove('hidden');
                 }
             });
             
-            closeMapModalBtn.addEventListener('click', () => mapImageModal.classList.add('hidden'));
-            mapImageModal.addEventListener('click', (e) => {
-                if (e.target === mapImageModal) {
-                    mapImageModal.classList.add('hidden');
+            // Lógica para tentar carregar PNG se JPG falhar
+            modalMapImage.onerror = () => {
+                const currentSrc = modalMapImage.src;
+                // Evita loop infinito se nem JPG nem PNG existirem
+                if (currentSrc.endsWith('.jpg')) {
+                    modalMapImage.src = currentSrc.replace('.jpg', '.png');
+                } else {
+                    // Se já tentou PNG e falhou, mostra a imagem reserva
+                    modalMapImage.src = 'https://placehold.co/800x600/EFEFEF/AAAAAA&text=Mapa+Nao+Encontrado';
                 }
-            });
+            };
             
-            confirmActionBtn.addEventListener('click', async () => {
+            closeMapModalBtn.addEventListener('click', () => mapImageModal.classList.add('hidden'));
+            mapImageModal.addEventListener('click', (e) => { if (e.target === mapImageModal) mapImageModal.classList.add('hidden'); });
+
+            confirmActionBtn.addEventListener('click', () => {
                 const { blockName, streetName, houseNumber } = confirmActionBtn.dataset;
-                await toggleHouseStatus(blockName, streetName, houseNumber);
+                const isCurrentlyDone = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] === 'DONE';
+                const successMessage = isCurrentlyDone ? 'Casa desmarcada com sucesso!' : 'Casa marcada com sucesso!';
+                
                 closeConfirmationModal();
-            });
-            cancelActionBtn.addEventListener('click', closeConfirmationModal);
-            confirmationModal.addEventListener('click', (e) => {
-                if (e.target === confirmationModal) closeConfirmationModal();
+
+                toggleDoneStatus(blockName, streetName, houseNumber)
+                    .then(() => {
+                        showNotification(successMessage, 'success');
+                    })
+                    .catch(err => {
+                        console.error("Erro ao salvar:", err);
+                        showNotification('Erro ao salvar.', 'error');
+                    });
             });
 
+            cancelActionBtn.addEventListener('click', closeConfirmationModal);
+            confirmationModal.addEventListener('click', (e) => { if (e.target === confirmationModal) closeConfirmationModal(); });
+            
             window.addEventListener('hashchange', handleRouteChange);
             handleRouteChange();
         });

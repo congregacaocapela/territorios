@@ -80,23 +80,6 @@
         </div>
     </div>
 
-    <!-- Modal de Confirmação de Exclusão -->
-    <div id="delete-confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <div class="text-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <h2 class="text-2xl font-bold mt-4">Excluir Território?</h2>
-                <div id="delete-modal-text" class="text-gray-600 my-4"></div>
-            </div>
-            <div class="mt-6 flex justify-center gap-4">
-                <button id="cancel-delete-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300">Cancelar</button>
-                <button id="confirm-delete-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-red-700">Confirmar Exclusão</button>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Modal de Reset de Territórios -->
     <div id="reset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
@@ -176,14 +159,7 @@
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style="height: 90vh; max-height: 800px;">
             <div class="p-6 border-b flex justify-between items-center">
                 <h2 id="edit-modal-title" class="text-2xl font-bold">Editar Território</h2>
-                <div class="flex items-center gap-4">
-                     <button id="delete-territory-btn" class="text-red-500 hover:text-red-700" title="Excluir Território">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
-                    <button id="close-edit-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
-                </div>
+                <button id="close-edit-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto modal-body-scrollable flex-grow">
                 <form id="edit-territory-form" class="space-y-6">
@@ -214,7 +190,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch, getDoc, deleteField, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch, getDoc, deleteField, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
@@ -270,23 +246,12 @@
             const closeAddModalBtn = document.getElementById('close-add-modal-btn');
             const saveNewTerritoryBtn = document.getElementById('save-new-territory-btn');
             const newTerritoryNameInput = document.getElementById('new-territory-name-input');
-            
-            const deleteTerritoryBtn = document.getElementById('delete-territory-btn');
-            const deleteConfirmationModal = document.getElementById('delete-confirmation-modal');
-            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
-            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
-            const deleteModalText = document.getElementById('delete-modal-text');
 
             let localTerritoryData = {};
             const territoriesColRef = collection(db, "territories");
             
             function renderTerritoryCards() {
                 grid.innerHTML = '';
-                if (Object.keys(localTerritoryData).length === 0) {
-                    grid.innerHTML = `<p class="text-gray-500 col-span-full text-center">Nenhum território adicionado. Clique no botão '+' para começar.</p>`;
-                    return;
-                }
-
                 const sortedIds = Object.keys(localTerritoryData).sort((a, b) => parseInt(a) - parseInt(b));
 
                 sortedIds.forEach(id => {
@@ -502,7 +467,6 @@
                     });
                 }
                 saveBtn.dataset.territoryId = territoryId;
-                deleteTerritoryBtn.dataset.territoryId = territoryId;
                 editModal.classList.remove('hidden');
             }
 
@@ -708,40 +672,6 @@
                 const toggle = e.target.closest('input[data-action="toggleDND"]');
                 if(toggle) {
                     handleToggleDND(toggle);
-                }
-            });
-            
-            deleteTerritoryBtn.addEventListener('click', (e) => {
-                const territoryId = e.currentTarget.dataset.territoryId;
-                const territoryName = localTerritoryData[territoryId]?.name || `Território ${territoryId}`;
-                deleteModalText.innerHTML = `Você tem certeza que deseja excluir o <strong>${territoryName}</strong>? <br><br> Esta ação é permanente e não pode ser desfeita.`;
-                confirmDeleteBtn.dataset.territoryId = territoryId;
-                closeEditModal();
-                deleteConfirmationModal.classList.remove('hidden');
-            });
-
-            cancelDeleteBtn.addEventListener('click', () => deleteConfirmationModal.classList.add('hidden'));
-            deleteConfirmationModal.addEventListener('click', (e) => {
-                if (e.target === deleteConfirmationModal) deleteConfirmationModal.classList.add('hidden');
-            });
-
-            confirmDeleteBtn.addEventListener('click', async (e) => {
-                const territoryId = e.currentTarget.dataset.territoryId;
-                const button = e.currentTarget;
-
-                button.disabled = true;
-                button.textContent = 'Excluindo...';
-
-                try {
-                    const docRef = doc(db, "territories", territoryId);
-                    await deleteDoc(docRef);
-                } catch (error) {
-                    console.error("Erro ao excluir território:", error);
-                    alert("Não foi possível excluir o território. Tente novamente.");
-                } finally {
-                    button.disabled = false;
-                    button.textContent = 'Confirmar Exclusão';
-                    deleteConfirmationModal.classList.add('hidden');
                 }
             });
 

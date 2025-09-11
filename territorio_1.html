@@ -282,9 +282,7 @@
                      console.error("Erro ao salvar status:", error);
                      // Se o erro for por aninhamento, tenta criar o objeto pai
                     if (error.code === 'invalid-argument') {
-                         const updatePayload = {};
-                         updatePayload[path] = status;
-                         await setDoc(docRef, updatePayload, { merge: true });
+                         await setDoc(docRef, { status: { [blockName]: { [streetName]: { [houseNumber]: status } } } }, { merge: true });
                     } else {
                         throw error;
                     }
@@ -311,11 +309,23 @@
                     showConfirmationModal(blockName, streetName, houseNumber);
                 }
                 if (e.target.closest('#territory-map-icon')) {
-                    const mapImageUrl = "https://lh3.googleusercontent.com/pw/AP1GczOq6P8fRdm7rWYK1alxordXCEHOEWZtvgV-WW3VcDJ7mY8zjINSIEDCn4VLbuNl3NgpPkA01nr-VQ_sqUii6wm-fKJmiUGJrcCa-t7CGCInp9_k3ociAGu99NPvMpV5n_ssk9N-z1DywT7KXx9-afX4=w1229-h869-s-no-gm?authuser=1"; 
-                    modalMapImage.src = mapImageUrl;
+                    const baseImageName = `territorio${TERRITORY_ID}`;
+                    modalMapImage.src = `${baseImageName}.jpg`; // Tenta carregar JPG primeiro
                     mapImageModal.classList.remove('hidden');
                 }
             });
+            
+            // Lógica para tentar carregar PNG se JPG falhar
+            modalMapImage.onerror = () => {
+                const currentSrc = modalMapImage.src;
+                // Evita loop infinito se nem JPG nem PNG existirem
+                if (currentSrc.endsWith('.jpg')) {
+                    modalMapImage.src = currentSrc.replace('.jpg', '.png');
+                } else {
+                    // Se já tentou PNG e falhou, mostra a imagem reserva
+                    modalMapImage.src = 'https://placehold.co/800x600/EFEFEF/AAAAAA&text=Mapa+Nao+Encontrado';
+                }
+            };
             
             closeMapModalBtn.addEventListener('click', () => mapImageModal.classList.add('hidden'));
             mapImageModal.addEventListener('click', (e) => { if (e.target === mapImageModal) mapImageModal.classList.add('hidden'); });
@@ -347,3 +357,4 @@
 
 </body>
 </html>
+
