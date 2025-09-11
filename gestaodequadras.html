@@ -35,7 +35,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 </button>
                  <button id="reset-icon-btn" class="text-white hover:text-gray-300 p-2 rounded-full" title="Zerar Progresso">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
             </div>
         </div>
@@ -61,7 +61,7 @@
                 <h2 class="text-xl font-bold text-red-600">Zerar Progresso</h2>
                 <button id="close-reset-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
-            <p class="text-gray-600 mb-4">Esta ação irá limpar o status de todas as casas marcadas nos territórios selecionados. <strong>Esta ação não pode ser desfeita.</strong></p>
+            <p class="text-gray-600 mb-4">Esta ação irá limpar o status apenas das casas marcadas como <strong>'Feita'</strong> nos territórios selecionados. Outras marcações (Não Bater, Comércio, etc.) serão mantidas. <strong>Esta ação não pode ser desfeita.</strong></p>
             <div class="space-y-4">
                 <div>
                     <label for="reset-territory-selection-input" class="block text-sm font-medium text-gray-700">Territórios a zerar (ex: 1, 3-5, 8)</label>
@@ -113,15 +113,15 @@
         </div>
     </div>
 
-    <!-- Modal de Informações Detalhadas -->
+    <!-- Modal de Informações Detalhadas e Gerenciamento de Status -->
     <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col" style="max-height: 90vh;">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
             <div class="p-6 border-b flex justify-between items-center">
                 <h2 id="info-modal-title" class="text-2xl font-bold">Detalhes do Território</h2>
                 <button id="close-info-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
             </div>
             <div id="info-modal-body" class="p-6 overflow-y-auto modal-body-scrollable flex-grow space-y-4">
-                <!-- Conteúdo do progresso das quadras será inserido aqui -->
+                <!-- Conteúdo do progresso e gerenciamento de status será inserido aqui -->
             </div>
         </div>
     </div>
@@ -222,7 +222,7 @@
                 5: "Salão do Reino", 6: "Mercado do Niro", 7: "Creche CDHU", 8: "Residência Wilson 1",
                 9: "Residência Wilson 2", 10: "Escola Francisco M. Almeida",
             };
-
+            
             async function initializeDefaultDataIfNeeded(snapshot) {
                 if (snapshot.empty) {
                     const batch = writeBatch(db);
@@ -245,28 +245,28 @@
 
                     const name = data.name || `Território ${i}`;
                     
-                    const totalHouses = data.blocks?.reduce((blockAcc, block) => {
-                        const housesInBlock = block.streets?.reduce((streetAcc, street) => {
-                            const houseNumbers = street.houses ? street.houses.split(',').filter(n => n.trim() !== '') : [];
-                            return streetAcc + houseNumbers.length;
-                        }, 0) || 0;
-                        return blockAcc + housesInBlock;
-                    }, 0) || 0;
+                    let totalHouses = 0;
+                    let dndHouses = 0;
+                    let doneHouses = 0;
 
-                    let completedHouses = 0;
-                    if (data.status) {
-                        Object.values(data.status).forEach(block => {
-                            Object.values(block).forEach(street => {
-                                Object.values(street).forEach(isCompleted => {
-                                    if (isCompleted) {
-                                        completedHouses++;
-                                    }
-                                });
+                    data.blocks?.forEach(block => {
+                        block.streets?.forEach(street => {
+                            const houseNumbers = street.houses ? street.houses.split(',').map(h => h.trim()).filter(Boolean) : [];
+                            totalHouses += houseNumbers.length;
+                            houseNumbers.forEach(house => {
+                                const status = data.status?.[block.name]?.[street.name]?.[house];
+                                if (status === 'DND') {
+                                    dndHouses++;
+                                }
+                                if (status === 'DONE') {
+                                    doneHouses++;
+                                }
                             });
                         });
-                    }
-                    
-                    const progress = totalHouses > 0 ? Math.round((completedHouses / totalHouses) * 100) : 0;
+                    });
+
+                    const workableHouses = totalHouses - dndHouses;
+                    const progress = workableHouses > 0 ? Math.round((doneHouses / workableHouses) * 100) : 0;
 
                     const card = document.createElement('div');
                     card.className = 'bg-white p-5 rounded-2xl shadow-md flex flex-col gap-4 transition-transform hover:scale-105';
@@ -285,7 +285,7 @@
                                 <span class="font-semibold text-gray-700">${progress}%</span>
                             </div>
                             <div class="text-xs text-gray-500 text-center">
-                                ${completedHouses} de ${totalHouses} casas concluídas
+                                ${doneHouses} de ${workableHouses} casas concluídas
                             </div>
                         </div>
                         <div class="flex gap-2 mt-auto">
@@ -311,49 +311,89 @@
 
                 infoModalTitle.textContent = `Detalhes de ${data.name}`;
                 infoModalBody.innerHTML = '';
+                infoModal.dataset.territoryId = territoryId;
 
                 if (!data.blocks || data.blocks.length === 0) {
-                    infoModalBody.innerHTML = '<p class="text-gray-500">Nenhuma quadra foi configurada para este território.</p>';
+                    infoModalBody.innerHTML = '<p class="text-gray-500">Nenhuma quadra foi configurada.</p>';
                     infoModal.classList.remove('hidden');
                     return;
                 }
 
                 data.blocks.forEach(block => {
-                    let totalHousesInBlock = 0;
-                    let completedHousesInBlock = 0;
+                    const blockDiv = document.createElement('div');
+                    blockDiv.className = 'p-4 border rounded-lg';
+                    let streetsHtml = '';
+                    if (block.streets && block.streets.length > 0) {
+                        streetsHtml = block.streets.map(street => {
+                            const houses = street.houses.split(',').filter(n => n.trim() !== '').map(n => n.trim());
+                            const housesHtml = houses.map(house => {
+                                const currentStatus = data.status?.[block.name]?.[street.name]?.[house] || 'EMPTY';
+                                
+                                let statusBadge = '';
+                                if (currentStatus === 'DONE') {
+                                    statusBadge = '<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">Feita</span>';
+                                } else if (currentStatus === 'DND') {
+                                    statusBadge = '<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">Não Bater</span>';
+                                }
 
-                    block.streets.forEach(street => {
-                        const houseNumbers = street.houses.split(',').filter(n => n.trim() !== '');
-                        totalHousesInBlock += houseNumbers.length;
-                        
-                        houseNumbers.forEach(num => {
-                             if(data.status?.[block.name]?.[street.name]?.[num]) {
-                                 completedHousesInBlock++;
-                             }
-                        });
-                    });
+                                const isDND = currentStatus === 'DND';
 
-                    const progress = totalHousesInBlock > 0 ? Math.round((completedHousesInBlock / totalHousesInBlock) * 100) : 0;
-                    const remainingHouses = totalHousesInBlock - completedHousesInBlock;
+                                return `
+                                    <div class="flex items-center justify-between py-2 border-b">
+                                        <span class="text-gray-700 font-medium">${house}</span>
+                                        <div class="flex items-center gap-3">
+                                            ${statusBadge}
+                                            <label class="relative inline-flex items-center cursor-pointer" title="Marcar como 'Não Bater'">
+                                                <input type="checkbox" ${isDND ? 'checked' : ''} data-action="toggleDND" data-block-name="${block.name}" data-street-name="${street.name}" data-house-number="${house}" class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
 
-                    const blockHtml = `
-                        <div class="p-4 border rounded-lg">
-                            <h4 class="font-bold text-lg">Quadra ${block.name}</h4>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 my-2">
-                                <div class="bg-blue-500 h-2.5 rounded-full" style="width: ${progress}%"></div>
-                            </div>
-                            <div class="text-sm flex justify-between text-gray-600">
-                                <span>Progresso: ${progress}%</span>
-                                <span>${completedHousesInBlock}/${totalHousesInBlock} casas</span>
-                            </div>
-                             <p class="text-sm text-gray-600 mt-1">Faltam ${remainingHouses} casas.</p>
-                        </div>
-                    `;
-                    infoModalBody.innerHTML += blockHtml;
+                            return `
+                                <div class="mt-2 pl-4 border-l-2">
+                                    <h5 class="font-semibold">${street.name}</h5>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">${housesHtml}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                         streetsHtml = '<p class="text-sm text-gray-400 mt-2">Nenhuma rua configurada.</p>';
+                    }
+                    
+                    blockDiv.innerHTML = `<h4 class="font-bold text-lg">Quadra ${block.name}</h4>${streetsHtml}`;
+                    infoModalBody.appendChild(blockDiv);
                 });
-
                 infoModal.classList.remove('hidden');
             }
+
+            async function handleToggleDND(toggle) {
+                const { blockName, streetName, houseNumber } = toggle.dataset;
+                const territoryId = infoModal.dataset.territoryId;
+                const data = localTerritoryData[territoryId];
+                const newStatus = toggle.checked ? 'DND' : null;
+
+                const docRef = doc(db, "territories", territoryId);
+                const path = `status.${blockName}.${streetName}.${houseNumber}`;
+                
+                toggle.disabled = true;
+                try {
+                    if (newStatus === null) {
+                        await updateDoc(docRef, { [path]: deleteField() });
+                    } else {
+                        await setDoc(docRef, { status: { [blockName]: { [streetName]: { [houseNumber]: newStatus } } } }, { merge: true });
+                    }
+                } catch (error) {
+                    console.error("Erro ao atualizar status DND:", error);
+                    alert("Ocorreu um erro ao atualizar o status.");
+                    toggle.checked = !toggle.checked; // Reverte a mudança visual em caso de erro
+                } finally {
+                    toggle.disabled = false;
+                }
+            }
+
 
             function createStreetInputRow(street = { name: '', houses: '', mapLink: '' }) {
                 const div = document.createElement('div');
@@ -366,7 +406,7 @@
                         </button>
                     </div>
                     <div>
-                        <textarea class="street-houses-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" rows="3" placeholder="Números das casas, separados por vírgula (Ex: 10, 25B, 40)">${street.houses}</textarea>
+                        <textarea class="street-houses-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" rows="3" placeholder="Números das casas (Ex: 10, 25B, 40, 55F, 60C)">${street.houses}</textarea>
                     </div>
                     <div>
                         <input type="url" value="${street.mapLink || ''}" class="street-map-link-input mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Link do Google Maps (opcional)">
@@ -482,9 +522,10 @@
                                 block.streets?.forEach(street => {
                                     const houses = street.houses.split(',').map(h => h.trim()).filter(Boolean);
                                     houses.forEach(house => {
-                                        const isVisited = data.status?.[block.name]?.[street.name]?.[house] || false;
-                                        if ((isVisited && includeVisited) || (!isVisited && includeNotVisited)) {
-                                            rows.push([id, data.name, block.name, street.name, house, isVisited ? 'Visitada' : 'Não Visitada']);
+                                        const status = data.status?.[block.name]?.[street.name]?.[house] || 'Não Visitada';
+                                        const statusText = status === 'DONE' ? 'Feita' : (status === 'DND' ? 'Não Bater' : status);
+                                        if ((status !== 'Não Visitada' && includeVisited) || (status === 'Não Visitada' && includeNotVisited)) {
+                                            rows.push([id, data.name, block.name, street.name, house, statusText]);
                                         }
                                     });
                                 });
@@ -521,16 +562,39 @@
                 btn.disabled = true;
                 btnText.textContent = 'Zerando...';
 
-                const batch = writeBatch(db);
-
-                territoryIds.forEach(id => {
-                    const docRef = doc(db, "territories", String(id));
-                    batch.update(docRef, { status: deleteField() });
-                });
-
                 try {
+                    const promises = territoryIds.map(id => getDoc(doc(db, "territories", String(id))));
+                    const docSnaps = await Promise.all(promises);
+                    const batch = writeBatch(db);
+
+                    for (const docSnap of docSnaps) {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            if (!data.status) continue; 
+
+                            const newStatus = JSON.parse(JSON.stringify(data.status));
+
+                            for (const blockName in newStatus) {
+                                for (const streetName in newStatus[blockName]) {
+                                    for (const houseNumber in newStatus[blockName][streetName]) {
+                                        if (newStatus[blockName][streetName][houseNumber] === 'DONE') {
+                                            delete newStatus[blockName][streetName][houseNumber];
+                                        }
+                                    }
+                                    if (Object.keys(newStatus[blockName][streetName]).length === 0) {
+                                        delete newStatus[blockName][streetName];
+                                    }
+                                }
+                                if (Object.keys(newStatus[blockName]).length === 0) {
+                                    delete newStatus[blockName];
+                                }
+                            }
+                            batch.update(docSnap.ref, { status: newStatus });
+                        }
+                    }
+
                     await batch.commit();
-                    alert(`Progresso de ${territoryIds.length} territórios zerado com sucesso!`);
+                    alert(`Progresso de 'Casa Feita' zerado com sucesso para os territórios selecionados!`);
                 } catch (err) {
                     console.error("Erro ao zerar territórios:", err);
                     alert("Ocorreu um erro ao zerar o progresso. Tente novamente.");
@@ -553,6 +617,13 @@
                 }
             });
             
+            infoModalBody.addEventListener('change', (e) => {
+                const toggle = e.target.closest('input[data-action="toggleDND"]');
+                if(toggle) {
+                    handleToggleDND(toggle);
+                }
+            });
+
             reportIconBtn.addEventListener('click', () => reportModal.classList.remove('hidden'));
             closeReportModalBtn.addEventListener('click', () => reportModal.classList.add('hidden'));
             reportModal.addEventListener('click', (e) => {
@@ -564,7 +635,7 @@
             closeResetModalBtn.addEventListener('click', () => resetModal.classList.add('hidden'));
             resetModal.addEventListener('click', (e) => {
                 if (e.target === resetModal) resetModal.classList.add('hidden');
-            });
+});
             confirmResetBtn.addEventListener('click', resetTerritories);
 
 
