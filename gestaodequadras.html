@@ -43,9 +43,14 @@
 
     <!-- Container da Aplicação -->
     <div class="container mx-auto p-4 sm:p-8">
-        <header class="text-center mb-8">
+        <header class="text-center mb-8 relative">
             <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Visão Geral dos Territórios</h1>
             <p class="text-base sm:text-lg text-gray-600 mt-2">Acompanhe e edite o progresso de todos os territórios.</p>
+            <button id="add-territory-btn" class="absolute top-0 right-0 bg-green-500 text-white rounded-full h-12 w-12 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform hover:scale-110" title="Adicionar Novo Território">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+            </button>
         </header>
 
         <!-- Grelha de Territórios -->
@@ -54,6 +59,28 @@
         </div>
     </div>
     
+    <!-- Modal de Adicionar Território -->
+    <div id="add-territory-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Adicionar Novo Território</h2>
+                <button id="close-add-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="new-territory-name-input" class="block text-sm font-medium text-gray-700">Nome do Novo Território</label>
+                    <input type="text" id="new-territory-name-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Ex: Bairro Novo">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button id="save-new-territory-btn" class="bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-600">
+                    Salvar Território
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Modal de Reset de Territórios -->
     <div id="reset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
@@ -214,6 +241,12 @@
             const closeResetModalBtn = document.getElementById('close-reset-modal-btn');
             const confirmResetBtn = document.getElementById('confirm-reset-btn');
 
+            const addTerritoryModal = document.getElementById('add-territory-modal');
+            const addTerritoryBtn = document.getElementById('add-territory-btn');
+            const closeAddModalBtn = document.getElementById('close-add-modal-btn');
+            const saveNewTerritoryBtn = document.getElementById('save-new-territory-btn');
+            const newTerritoryNameInput = document.getElementById('new-territory-name-input');
+
             let localTerritoryData = {};
             const territoriesColRef = collection(db, "territories");
 
@@ -239,9 +272,12 @@
             
             function renderTerritoryCards() {
                 grid.innerHTML = '';
-                for (let i = 1; i <= 46; i++) {
+                const sortedIds = Object.keys(localTerritoryData).sort((a, b) => parseInt(a) - parseInt(b));
+
+                sortedIds.forEach(id => {
+                    const i = parseInt(id);
                     const data = localTerritoryData[i];
-                    if (!data) continue;
+                    if (!data) return;
 
                     const name = data.name || `Território ${i}`;
                     
@@ -294,8 +330,9 @@
                         </div>
                     `;
                     grid.appendChild(card);
-                }
+                });
             }
+
 
             onSnapshot(territoriesColRef, async (snapshot) => {
                 await initializeDefaultDataIfNeeded(snapshot);
@@ -372,7 +409,6 @@
             async function handleToggleDND(toggle) {
                 const { blockName, streetName, houseNumber } = toggle.dataset;
                 const territoryId = infoModal.dataset.territoryId;
-                const data = localTerritoryData[territoryId];
                 const newStatus = toggle.checked ? 'DND' : null;
 
                 const docRef = doc(db, "territories", territoryId);
@@ -604,6 +640,38 @@
                     resetModal.classList.add('hidden');
                 }
             }
+            
+            async function addNewTerritory() {
+                const newName = newTerritoryNameInput.value.trim();
+                if (!newName) {
+                    alert('Por favor, insira um nome para o novo território.');
+                    return;
+                }
+
+                saveNewTerritoryBtn.disabled = true;
+                saveNewTerritoryBtn.textContent = 'Salvando...';
+
+                try {
+                    const existingIds = Object.keys(localTerritoryData).map(Number);
+                    const newId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1;
+                    
+                    const newTerritoryData = {
+                        name: newName,
+                        blocks: []
+                    };
+                    
+                    const docRef = doc(db, "territories", String(newId));
+                    await setDoc(docRef, newTerritoryData);
+
+                    addTerritoryModal.classList.add('hidden');
+                } catch (error) {
+                    console.error("Erro ao adicionar novo território:", error);
+                    alert("Não foi possível adicionar o território. Tente novamente.");
+                } finally {
+                    saveNewTerritoryBtn.disabled = false;
+                    saveNewTerritoryBtn.textContent = 'Salvar Território';
+                }
+            }
 
             // --- Event Listeners ---
             grid.addEventListener('click', (e) => {
@@ -635,8 +703,18 @@
             closeResetModalBtn.addEventListener('click', () => resetModal.classList.add('hidden'));
             resetModal.addEventListener('click', (e) => {
                 if (e.target === resetModal) resetModal.classList.add('hidden');
-});
+            });
             confirmResetBtn.addEventListener('click', resetTerritories);
+
+            addTerritoryBtn.addEventListener('click', () => {
+                newTerritoryNameInput.value = '';
+                addTerritoryModal.classList.remove('hidden');
+            });
+            closeAddModalBtn.addEventListener('click', () => addTerritoryModal.classList.add('hidden'));
+            addTerritoryModal.addEventListener('click', (e) => {
+                if (e.target === addTerritoryModal) addTerritoryModal.classList.add('hidden');
+            });
+            saveNewTerritoryBtn.addEventListener('click', addNewTerritory);
 
 
             addBlockBtn.addEventListener('click', () => {
