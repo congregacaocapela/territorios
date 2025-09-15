@@ -212,9 +212,30 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="weekday-settings-container"></div>
                     <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mt-6">Final de Semana</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="weekend-settings-container"></div>
+                    
+                    <!-- INÍCIO: Seção de Gerenciamento de Territórios -->
+                    <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mt-6">Gerenciar Territórios</h3>
+                    <div class="p-4 bg-gray-50 rounded-lg border">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label for="new-territory-id" class="block text-sm font-medium text-gray-700">Nº Território</label>
+                                <input type="number" id="new-territory-id" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="Ex: 47" min="1">
+                            </div>
+                            <div>
+                                <label for="new-territory-blocks" class="block text-sm font-medium text-gray-700">Quadras</label>
+                                <input type="text" id="new-territory-blocks" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" placeholder="Ex: A, B, C">
+                            </div>
+                            <button type="button" id="add-territory-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700">Adicionar</button>
+                        </div>
+                    </div>
+                    <div id="territory-management-list-container" class="mt-4 space-y-2">
+                        <!-- Lista de territórios será renderizada aqui pelo JS -->
+                    </div>
+                    <!-- FIM: Seção de Gerenciamento de Territórios -->
+
                 </div>
                 <div class="mt-6 pt-4 border-t flex justify-end gap-4">
-                    <button type="button" id="cancel-settings-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-md hover:bg-gray-400">Cancelar</button>
+                    <button type="button" id="cancel-settings-btn" class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-md hover:bg-gray-400">Fechar</button>
                     <button type="submit" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-blue-700">Salvar Alterações</button>
                 </div>
             </form>
@@ -373,19 +394,7 @@
                 linkSettingsForm: document.getElementById('link-settings-form'),
                 linkSettingsContainer: document.getElementById('link-settings-container'),
             },
-            data: [
-                {id: 1, blocks: ['A', 'B', 'C', 'D']}, {id: 2, blocks: ['A', 'B', 'C', 'D']}, {id: 3, blocks: ['A', 'B']}, {id: 4, blocks: ['A', 'B', 'C']}, {id: 5, blocks: ['A', 'B', 'C']},
-                {id: 6, blocks: ['A', 'B', 'C']}, {id: 7, blocks: ['A', 'B', 'C', 'D']}, {id: 8, blocks: ['A', 'B', 'C', 'D']}, {id: 9, blocks: ['A', 'B', 'C']}, {id: 10, blocks: ['A', 'B', 'C']},
-                {id: 11, blocks: ['A', 'B']}, {id: 12, blocks: ['A', 'B', 'C', 'D']}, {id: 13, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 14, blocks: ['A']}, {id: 15, blocks: ['A', 'B', 'C', 'D', 'E']},
-                {id: 16, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 17, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 18, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 19, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']},
-                {id: 20, blocks: ['A', 'B', 'C']}, {id: 21, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 22, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 23, blocks: ['A', 'B', 'C']}, {id: 24, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']},
-                {id: 25, blocks: ['A', 'B', 'C']}, {id: 26, blocks: ['A', 'B', 'C', 'D']}, {id: 27, blocks: ['A', 'B', 'C', 'D']}, {id: 28, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 29, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']},
-                {id: 30, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']}, {id: 31, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']}, {id: 32, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']},
-                {id: 33, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 34, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']}, {id: 35, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']}, {id: 36, blocks: ['A', 'B', 'C']},
-                {id: 37, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']}, {id: 38, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']}, {id: 39, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'L', 'M']},
-                {id: 40, blocks: ['A', 'B']}, {id: 41, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 42, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 43, blocks: ['A', 'B', 'C', 'D']}, {id: 44, blocks: ['A', 'B', 'C']},
-                {id: 45, blocks: ['A', 'B', 'C', 'D']}, {id: 46, blocks: ['A']}
-            ],
+            data: [], // Os dados dos territórios agora são carregados do Firestore
 
             initialize() {
                 this.listenForRealtimeUpdates();
@@ -394,6 +403,44 @@
             },
 
             listenForRealtimeUpdates() {
+                // Listener para a lista de territórios
+                onSnapshot(doc(db, "appState", "territoryList"), (docSnapshot) => {
+                    const defaultTerritories = [
+                        {id: 1, blocks: ['A', 'B', 'C', 'D']}, {id: 2, blocks: ['A', 'B', 'C', 'D']}, {id: 3, blocks: ['A', 'B']}, {id: 4, blocks: ['A', 'B', 'C']}, {id: 5, blocks: ['A', 'B', 'C']},
+                        {id: 6, blocks: ['A', 'B', 'C']}, {id: 7, blocks: ['A', 'B', 'C', 'D']}, {id: 8, blocks: ['A', 'B', 'C', 'D']}, {id: 9, blocks: ['A', 'B', 'C']}, {id: 10, blocks: ['A', 'B', 'C']},
+                        {id: 11, blocks: ['A', 'B']}, {id: 12, blocks: ['A', 'B', 'C', 'D']}, {id: 13, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 14, blocks: ['A']}, {id: 15, blocks: ['A', 'B', 'C', 'D', 'E']},
+                        {id: 16, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 17, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 18, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 19, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']},
+                        {id: 20, blocks: ['A', 'B', 'C']}, {id: 21, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 22, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 23, blocks: ['A', 'B', 'C']}, {id: 24, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']},
+                        {id: 25, blocks: ['A', 'B', 'C']}, {id: 26, blocks: ['A', 'B', 'C', 'D']}, {id: 27, blocks: ['A', 'B', 'C', 'D']}, {id: 28, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 29, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']},
+                        {id: 30, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']}, {id: 31, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']}, {id: 32, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']},
+                        {id: 33, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 34, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']}, {id: 35, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G']}, {id: 36, blocks: ['A', 'B', 'C']},
+                        {id: 37, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']}, {id: 38, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']}, {id: 39, blocks: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'L', 'M']},
+                        {id: 40, blocks: ['A', 'B']}, {id: 41, blocks: ['A', 'B', 'C', 'D', 'E']}, {id: 42, blocks: ['A', 'B', 'C', 'D', 'E', 'F']}, {id: 43, blocks: ['A', 'B', 'C', 'D']}, {id: 44, blocks: ['A', 'B', 'C']},
+                        {id: 45, blocks: ['A', 'B', 'C', 'D']}, {id: 46, blocks: ['A']}
+                    ];
+                    if (docSnapshot.exists() && docSnapshot.data().territories) {
+                        this.data = docSnapshot.data().territories;
+                    } else {
+                        console.log("Nenhuma lista de territórios encontrada, criando uma nova com dados padrão.");
+                        this.data = defaultTerritories;
+                        setDoc(doc(db, "appState", "territoryList"), { territories: defaultTerritories });
+                    }
+                    
+                    // Sincroniza com o app S-13
+                    const maxTerritoryId = this.data.length > 0 ? Math.max(...this.data.map(t => t.id)) : 0;
+                    s13App.config.numTerritories = maxTerritoryId;
+                    if (s13App.ui.territorioNumeroInput) {
+                        s13App.ui.territorioNumeroInput.max = maxTerritoryId;
+                        s13App.ui.territorioNumeroInput.placeholder = `1-${maxTerritoryId}`;
+                    }
+
+                    // Re-renderiza componentes que dependem dos dados dos territórios
+                    this.renderAll();
+                    if (s13App.state.s13Data) s13App.renderTable(s13App.state.currentPage);
+                    if (!this.ui.settingsModal.classList.contains('hidden')) this.renderTerritoryManagement();
+                    if (!this.ui.linkSettingsModal.classList.contains('hidden')) this.openLinkSettingsModal();
+                });
+
                 onSnapshot(doc(db, "appState", "mainState"), (docSnapshot) => {
                     console.log("Recebida atualização do 'mainState'");
                     const mainState = docSnapshot.exists() ? docSnapshot.data() : {};
@@ -459,6 +506,7 @@
             },
             renderGrid() {
                 this.ui.grid.innerHTML = '';
+                if (!this.data) return;
                 const territoriesToDisplay = this.data.filter(t => this.state.showArchived ? this.state.archived.includes(t.id) : !this.state.archived.includes(t.id));
                 if (territoriesToDisplay.length === 0) { this.ui.grid.innerHTML = `<p class="col-span-full text-center text-gray-500">${this.state.showArchived ? 'Nenhum território arquivado.' : 'Nenhum território ativo.'}</p>`; }
                 else { territoriesToDisplay.forEach(t => this.ui.grid.appendChild(this.createTerritoryCard(t))); }
@@ -477,7 +525,8 @@
             },
             getTerritoryProgress(id) {
                 const status = this.state.status[id] || {}; 
-                const totalCount = this.data.find(t => t.id === id)?.blocks.length || 0;
+                const territory = this.data.find(t => t.id === id);
+                const totalCount = territory ? territory.blocks.length : 0;
                 const completedCount = Object.values(status).filter(Boolean).length;
                 const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
                 let s = { text: 'Pendente', color: 'bg-red-500', textC: 'text-red-800', bgC: 'bg-red-100' };
@@ -624,6 +673,7 @@
             },
             openStatusModal(id) {
                 const t = this.data.find(td => td.id === id); const modal = this.ui.statusModal;
+                if (!t) { customAlert("Território não encontrado."); return; }
                 modal.querySelector('#status-modal-title').textContent = `Território ${t.id}`; modal.dataset.currentTerritoryId = id;
                 const container = modal.querySelector('#status-modal-blocks-container');
                 container.innerHTML = `<div class="flex items-center justify-between bg-gray-200 p-3 rounded-lg border-b-2 border-gray-300 mb-3"><label for="select-all-blocks" class="font-bold text-gray-700">Marcar Todas</label><input type="checkbox" id="select-all-blocks" class="h-6 w-6 rounded text-blue-600"></div>`;
@@ -669,6 +719,7 @@
                         this.ui.weekendSettingsContainer.innerHTML += `<div><label for="setting-${key}" class="block text-sm font-medium text-gray-700">${key.replace('-', ' ')}</label><input type="text" id="setting-${key}" data-key="${key}" data-type="weekend" value="${value}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>`;
                     }
                 }
+                this.renderTerritoryManagement();
                 this.ui.settingsModal.classList.remove('hidden');
             },
             async saveSettings(e) {
@@ -686,6 +737,29 @@
                 } catch (error) {
                     console.error("Erro ao salvar configurações:", error);
                     customAlert("Falha ao salvar as configurações.");
+                }
+            },
+            renderTerritoryManagement() {
+                const container = document.getElementById('territory-management-list-container');
+                if (!container) return;
+                container.innerHTML = '';
+                this.data.forEach(t => {
+                    const territoryEl = document.createElement('div');
+                    territoryEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-md';
+                    territoryEl.innerHTML = `
+                        <span><strong>Território ${t.id}</strong> - Quadras: ${t.blocks.join(', ')}</span>
+                        <button type="button" class="delete-territory-btn text-red-500 hover:text-red-700 font-bold p-1 leading-none text-xl" data-id="${t.id}" title="Remover Território ${t.id}">&times;</button>
+                    `;
+                    container.appendChild(territoryEl);
+                });
+            },
+            async saveTerritories() {
+                try {
+                    await setDoc(doc(db, "appState", "territoryList"), { territories: this.data });
+                    console.log("Lista de territórios salva com sucesso!");
+                } catch (error) {
+                    console.error("Erro ao salvar territórios:", error);
+                    customAlert("Falha ao salvar a lista de territórios.");
                 }
             },
             openHistoryModal() {
@@ -846,6 +920,43 @@
                         await this.saveState();
                     }
                 });
+
+                this.ui.settingsModal.addEventListener('click', (e) => {
+                    if (e.target.id === 'add-territory-btn') {
+                        const idInput = document.getElementById('new-territory-id');
+                        const blocksInput = document.getElementById('new-territory-blocks');
+                        const id = parseInt(idInput.value);
+                        const blocks = blocksInput.value.split(',').map(b => b.trim().toUpperCase()).filter(b => b);
+
+                        if (!id || blocks.length === 0) {
+                            customAlert("Por favor, preencha o número do território e as quadras.");
+                            return;
+                        }
+                        if (this.data.some(t => t.id === id)) {
+                            customAlert(`O território ${id} já existe.`);
+                            return;
+                        }
+
+                        this.data.push({ id, blocks });
+                        this.data.sort((a, b) => a.id - b.id);
+                        this.saveTerritories(); // Isso aciona o snapshot e re-renderiza a UI
+                        idInput.value = '';
+                        blocksInput.value = '';
+                    }
+
+                    if (e.target.classList.contains('delete-territory-btn')) {
+                        const id = parseInt(e.target.closest('.delete-territory-btn').dataset.id);
+                        mainNav.showConfirmationModal(
+                            'Remover Território',
+                            `Tem certeza que deseja remover o território ${id}? Esta ação não pode ser desfeita.`,
+                            () => {
+                                this.data = this.data.filter(t => t.id !== id);
+                                this.saveTerritories(); // Isso aciona o snapshot e re-renderiza a UI
+                            }
+                        );
+                    }
+                });
+
                 document.body.addEventListener('input', (e) => { if (e.target.id === 'sunday-name-select') { this.state.weekendSelections.DOMINGO.name = e.target.value; this.saveState(); } });
                 this.ui.toggleArchivedBtn.addEventListener('click', () => {
                     this.state.showArchived = !this.state.showArchived;
@@ -959,6 +1070,7 @@
                 const getTerritoryLine = (id) => {
                     if (typeof id !== 'number') return id;
                     const t = this.data.find(td => td.id == id);
+                    if (!t) return `${id} (não encontrado)`;
                     const allBlocks = t.blocks; const pendingBlocks = allBlocks.filter(b => !(this.state.status[id] && this.state.status[id][b]));
                     if (pendingBlocks.length === 0) return `${id} (Completo)`;
                     if (pendingBlocks.length < allBlocks.length) return `${id} (${pendingBlocks.join(', ')})`;
@@ -1060,7 +1172,7 @@
         // REGISTRO DE TERRITÓRIOS S-13 - LÓGICA
         // =================================================================
         const s13App = {
-            config: { numTerritories: 46, numDesignations: 4 },
+            config: { numTerritories: 0, numDesignations: 4 },
             state: { publicadores: [], s13Data: {}, currentPage: 0 },
             ui: {
                 form: document.getElementById('s13-registro-form'),
