@@ -74,6 +74,17 @@
         </div>
     </div>
 
+    <!-- Modal de Informação -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <h2 class="text-xl font-bold mb-4">Informação</h2>
+            <p class="text-gray-600 mb-6">Se algum número de casa estiver errado ou faltando, por favor, procure por Guilherme e mande os números corretos para atualizar pelo WhatsApp. Obrigado!</p>
+            <div class="flex justify-center">
+                <button id="close-info-modal-btn" class="bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-600">Entendi</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -116,6 +127,9 @@
             const closeMapModalBtn = document.getElementById('close-map-modal-btn');
             
             const notificationContainer = document.getElementById('notification-container');
+            
+            const infoModal = document.getElementById('info-modal');
+            const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
 
             const territoryDocRef = doc(db, "territories", TERRITORY_ID);
             let currentTerritoryData = {};
@@ -187,29 +201,42 @@
             }
 
             function renderBlockView(blockName, data) {
-                 const territoryName = data.name || `Território ${TERRITORY_ID}`;
-                 const block = data.blocks?.find(b => b.name === blockName);
+                const territoryName = data.name || `Território ${TERRITORY_ID}`;
+                const block = data.blocks?.find(b => b.name === blockName);
                 if (!block) { window.location.hash = ''; return; }
                 document.title = `Quadra ${blockName} - ${territoryName}`;
 
-                const streetsHtml = block.streets.map(street => {
-                    const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
-                    const range = houseNumbers.length > 1 ? `${houseNumbers[0]} à ${houseNumbers[houseNumbers.length - 1]}` : (houseNumbers.length === 1 ? `Nº ${houseNumbers[0]}` : 'Nenhum número');
-                    const mapLinkIcon = street.mapLink 
-                        ? `<a href="${street.mapLink}" target="_blank" rel="noopener noreferrer" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></a>`
-                        : `<div class="bg-gray-200 p-3 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>`;
-                    return `<div class="flex items-center bg-white p-2 rounded-xl shadow-sm gap-2">${mapLinkIcon}<a href="#${encodeURIComponent(block.name)}&${encodeURIComponent(street.name)}" class="street-link flex-grow flex justify-between items-center p-2"><div><h3 class="font-bold text-lg">${street.name}</h3><p class="text-sm text-gray-500">Nº de ${range}</p></div><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></a></div>`;
-                }).join('');
+                let streetsContentHtml;
+                if (!block.streets || block.streets.length === 0) {
+                    streetsContentHtml = `
+                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg shadow-md my-4 mx-4" role="alert">
+                            <p class="font-bold">Aviso</p>
+                            <p>Ainda não temos as ruas desta quadra cadastradas. Por favor, envie para o meu whatsapp para que eu possa adicionar e atualizar. obrigado. ass: Guilherme</p>
+                        </div>
+                    `;
+                } else {
+                    streetsContentHtml = '<div class="p-4 space-y-3">' + block.streets.map(street => {
+                        const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
+                        const range = houseNumbers.length > 1 ? `${houseNumbers[0]} à ${houseNumbers[houseNumbers.length - 1]}` : (houseNumbers.length === 1 ? `Nº ${houseNumbers[0]}` : 'Nenhum número');
+                        const mapLinkIcon = street.mapLink 
+                            ? `<a href="${street.mapLink}" target="_blank" rel="noopener noreferrer" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></a>`
+                            : `<div class="bg-gray-200 p-3 rounded-lg"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>`;
+                        return `<div class="flex items-center bg-white p-2 rounded-xl shadow-sm gap-2">${mapLinkIcon}<a href="#${encodeURIComponent(block.name)}&${encodeURIComponent(street.name)}" class="street-link flex-grow flex justify-between items-center p-2"><div><h3 class="font-bold text-lg">${street.name}</h3><p class="text-sm text-gray-500">Nº de ${range}</p></div><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg></a></div>`;
+                    }).join('') + '</div>';
+                }
 
                  appContainer.innerHTML = `
                     <div class="bg-blue-100 text-blue-800 p-6 rounded-b-3xl shadow-lg relative">
                          <a href="#" class="absolute top-0 left-0 h-full px-5 flex items-center text-blue-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
+                         <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-blue-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                         </button>
                         <div class="text-center">
                             <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${territoryName}</h1>
                             <p class="text-xl">Quadra ${block.name}</p>
                         </div>
                     </div>
-                    <div class="p-4 space-y-3">${streetsHtml}</div>`;
+                    ${streetsContentHtml}`;
             }
 
             function getStatusStyle(status) {
@@ -231,16 +258,35 @@
                 document.title = `${streetName} - Quadra ${blockName}`;
                 
                 const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
-                const housesGridHtml = houseNumbers.map(num => {
-                    const status = data.status?.[blockName]?.[streetName]?.[num] || null;
-                    const styleClass = getStatusStyle(status);
-                    const content = ['F', 'T', 'C', 'JW'].includes(status) ? status : num;
-                    return `<div class="house-box w-full aspect-square flex items-center justify-center text-lg font-bold rounded-lg cursor-pointer ${styleClass}" data-house-number="${num}">${content}</div>`;
-                }).join('');
+                
+                let streetContentHtml;
+                if (houseNumbers.length === 0 || (houseNumbers.length === 1 && houseNumbers[0] === '0')) {
+                    streetContentHtml = `
+                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg shadow-md my-4" role="alert">
+                            <p class="font-bold">Aviso</p>
+                            <p>Ainda não temos os numeros dessa rua, por favor envie para o meu whatsapp para que eu possa adicionar e atualizar as casas obrigado. ass: Guilherme</p>
+                        </div>
+                    `;
+                } else {
+                    const housesGridHtml = houseNumbers.map(num => {
+                        const status = data.status?.[blockName]?.[streetName]?.[num] || null;
+                        const styleClass = getStatusStyle(status);
+                        const content = ['F', 'T', 'C', 'JW'].includes(status) ? status : num;
+                        return `<div class="house-box w-full aspect-square flex items-center justify-center text-lg font-bold rounded-lg cursor-pointer ${styleClass}" data-house-number="${num}">${content}</div>`;
+                    }).join('');
+
+                    streetContentHtml = `
+                        <h2 class="font-bold text-gray-500 my-4">CASAS</h2>
+                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">${housesGridHtml}</div>
+                    `;
+                }
                 
                 appContainer.innerHTML = `
                     <div class="bg-blue-100 text-blue-800 p-6 rounded-b-3xl shadow-lg relative">
                         <a href="#${encodeURIComponent(blockName)}" class="absolute top-0 left-0 h-full px-5 flex items-center text-blue-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
+                        <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-blue-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
                         <div class="text-center">
                             <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${data.name}</h1>
                             <p class="text-xl">Quadra ${blockName}</p>
@@ -248,8 +294,7 @@
                         </div>
                     </div>
                     <div class="p-4">
-                        <h2 class="font-bold text-gray-500 my-4">CASAS</h2>
-                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">${housesGridHtml}</div>
+                        ${streetContentHtml}
                     </div>`;
             }
 
@@ -314,6 +359,9 @@
                     modalMapImage.src = `${baseImageName}.jpg`; // Tenta carregar JPG primeiro
                     mapImageModal.classList.remove('hidden');
                 }
+                if (e.target.closest('#info-btn')) {
+                    infoModal.classList.remove('hidden');
+                }
             });
             
             // Lógica para tentar carregar PNG se JPG falhar
@@ -351,6 +399,9 @@
             cancelActionBtn.addEventListener('click', closeConfirmationModal);
             confirmationModal.addEventListener('click', (e) => { if (e.target === confirmationModal) closeConfirmationModal(); });
             
+            closeInfoModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+            infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.add('hidden'); });
+
             window.addEventListener('hashchange', handleRouteChange);
             handleRouteChange();
         });
