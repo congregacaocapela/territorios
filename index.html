@@ -14,7 +14,7 @@
 
     <div class="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl text-center">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Acesso Restrito</h1>
+            <h1 class="text-3xl font-bold text-gray-900">Acesso ao Painel</h1>
             <p class="mt-2 text-gray-600">Selecione o painel que deseja acessar.</p>
         </div>
         <div class="space-y-4">
@@ -22,10 +22,13 @@
                 Painel de Controle
             </button>
             <button data-url="gestaodequadras.html" class="nav-btn w-full bg-teal-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-teal-700 transition-colors text-lg">
-                Quadras e Casas
+                Gestão de Territórios
             </button>
             <button data-url="s13.html" class="nav-btn w-full bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg hover:bg-gray-800 transition-colors text-lg">
                 S-13
+            </button>
+             <button data-url="portaldeterritorios.html" class="nav-btn w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors text-lg">
+                Portal de Territórios
             </button>
         </div>
     </div>
@@ -67,11 +70,19 @@
         // --- Button Logic ---
         document.querySelectorAll('.nav-btn').forEach(button => {
             button.addEventListener('click', () => {
+                const targetUrl = button.dataset.url;
+
+                // Se for o portal de territórios, navega direto sem senha
+                if (targetUrl === 'portaldeterritorios.html') {
+                    window.location.href = targetUrl;
+                    return;
+                }
+                
+                // Para os outros botões, pede a senha
                 const password = prompt("Por favor, digite a senha para continuar:");
                 
-                // User clicked cancel
                 if (password === null) {
-                    return;
+                    return; // Usuário clicou em cancelar
                 }
 
                 if (password === correctPassword) {
