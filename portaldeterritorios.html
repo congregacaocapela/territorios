@@ -35,9 +35,6 @@
     <main class="container mx-auto p-6">
         <div id="territory-cards-container" class="card-container">
             <!-- Os cartões de território serão gerados aqui via JS -->
-            <div id="loading-state" class="col-span-full text-center py-10 text-gray-500">
-                <p>Carregando territórios...</p>
-            </div>
         </div>
     </main>
 
@@ -48,27 +45,8 @@
         </svg>
     </a>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
-            authDomain: "quadrascasas.firebaseapp.com",
-            projectId: "quadrascasas",
-            storageBucket: "quadrascasas.firebasestorage.app",
-            messagingSenderId: "1088979227180",
-            appId: "1:1088979227180:web:fbf72a87b811236efeb789",
-            measurementId: "G-YEQ216076G"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        document.addEventListener('DOMContentLoaded', async () => {
-
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
             // Lógica para carregar o favicon
             const faviconTag = document.getElementById('favicon');
             const pngIcon = new Image();
@@ -86,61 +64,53 @@
             };
 
             const container = document.getElementById('territory-cards-container');
-            const loadingState = document.getElementById('loading-state');
-            
-            try {
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Authentication failed:", error);
-                loadingState.textContent = 'Erro ao conectar. Tente recarregar a página.';
-                return;
-            }
+            container.innerHTML = ''; // Limpa o loader inicial
 
-            const territoriesColRef = collection(db, "territories");
+            const territoryNames = {
+                1: "Areião", 2: "Capela Material de Construção", 3: "Campo do Grude", 4: "Lanchonete Jó",
+                5: "Salão do Reino", 6: "Mercado do Niro", 7: "Creche CDHU", 8: "Residência Wilson 1",
+                9: "Residência Wilson 2", 10: "Escola Francisco M. Almeida", 11: "Crivellari",
+                12: "Jardim Casa Grande 1", 13: "Jardim Casa Grande 2", 14: "Estrada para o Cercadinho",
+                15: "Cercadinho 1 (Maria Olinda)", 16: "Cercadinho 2", 17: "Residencial Nogueira",
+                18: "Bradesco", 19: "Vila Verti", 20: "Hotel (Ondina)", 21: "Mercado do Ponto",
+                22: "Tudo Barato", 23: "Residencia Emilio", 24: "Piracicaba", 25: "Residencia do Tulio",
+                26: "Auto Escola Luciana", 27: "Piracicaba (São Roque)", 28: "Material de Construção",
+                29: "Portal São Francisco", 30: "Rodoviária", 31: "Praça da Matriz", 32: "Higino Moreira",
+                33: "Escola Coronel", 34: "Mercado Lane", 35: "Beato", 36: "Sabesp", 37: "Sonia Maria 1",
+                38: "Sonia Maria 2", 39: "Sonia Maria (Serralheria)", 40: "Academia Corpus",
+                41: "Central Park 1", 42: "Central Park 2", 43: "Central Park 3", 44: "Cercadinho",
+                45: "Cercadinho 3", 46: "Cercadinho 4", 47: "Posto Desativado", 48: "Pesqueiro Dourado",
+                49: "Alarcon", 50: "Chacaras Itarassu"
+            };
 
-            onSnapshot(territoriesColRef, (snapshot) => {
-                if (snapshot.empty) {
-                    loadingState.textContent = 'Nenhum território encontrado.';
-                    return;
-                }
+            for (let i = 1; i <= 50; i++) {
+                const card = document.createElement('a');
+                card.href = `territorio_${i}.html`;
+                card.target = "_blank";
+                card.rel = "noopener noreferrer";
 
-                container.innerHTML = ''; // Limpa o container antes de renderizar
+                const isEven = (i - 1) % 2 === 0;
+                const bgColor = isEven ? 'bg-white' : 'bg-blue-100';
+                const titleColor = isEven ? 'text-gray-800' : 'text-blue-800';
+                const subTitleColor = isEven ? 'text-blue-600' : 'text-blue-700';
                 
-                const territories = [];
-                snapshot.forEach(doc => {
-                    territories.push({ id: doc.id, ...doc.data() });
-                });
+                const territoryName = territoryNames[i] || `Território ${String(i).padStart(2, '0')}`;
 
-                // Ordena os territórios pelo ID numericamente
-                territories.sort((a, b) => parseInt(a.id) - parseInt(b.id));
-
-                territories.forEach((territory, index) => {
-                    const card = document.createElement('a');
-                    card.href = `territorio_${territory.id}.html`;
-                    card.target = "_blank"; // Garante que abra em uma nova aba
-                    card.rel = "noopener noreferrer";
-                    
-                    const isEven = index % 2 === 0;
-                    const bgColor = isEven ? 'bg-white' : 'bg-blue-100';
-                    const titleColor = isEven ? 'text-gray-800' : 'text-blue-800';
-                    const subTitleColor = isEven ? 'text-blue-600' : 'text-blue-700';
-
-                    card.className = `${bgColor} p-6 rounded-2xl shadow-lg flex items-center justify-between transition-transform transform hover:-translate-y-1 hover:shadow-xl`;
-                    
-                    card.innerHTML = `
-                        <div>
-                            <span class="text-sm font-semibold ${subTitleColor}">TERRITÓRIO ${String(territory.id).padStart(2, '0')}</span>
-                            <h2 class="text-xl font-bold ${titleColor} mt-1">${territory.name}</h2>
-                        </div>
-                        <div class="text-blue-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            });
+                card.className = `${bgColor} p-6 rounded-2xl shadow-lg flex items-center justify-between transition-transform transform hover:-translate-y-1 hover:shadow-xl`;
+                
+                card.innerHTML = `
+                    <div>
+                        <span class="text-sm font-semibold ${subTitleColor}">TERRITÓRIO ${String(i).padStart(2, '0')}</span>
+                        <h2 class="text-xl font-bold ${titleColor} mt-1">${territoryName}</h2>
+                    </div>
+                    <div class="text-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </div>
+                `;
+                container.appendChild(card);
+            }
         });
     </script>
 
