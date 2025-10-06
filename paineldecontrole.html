@@ -724,12 +724,22 @@
             },
             async saveSettings(e) {
                 e.preventDefault();
-                const newConfig = { weekday: {}, weekend: {} };
-                const inputs = this.ui.settingsForm.querySelectorAll('input[type="text"]');
+                const newConfig = { 
+                    weekday: {}, 
+                    // Preserva as configurações existentes do fim de semana que não são editáveis neste modal (ex: DOMINGO)
+                    weekend: { ...(this.state.config.weekend || {}) } 
+                };
+
+                // Seleciona apenas os inputs que pertencem à configuração de designação
+                const inputs = this.ui.settingsForm.querySelectorAll('input[type="text"][data-type]');
+                
                 inputs.forEach(input => {
                     const { key, type } = input.dataset;
-                    newConfig[type][key] = input.value;
+                    if (newConfig[type]) { // Garante que o tipo ('weekday' ou 'weekend') existe no objeto
+                        newConfig[type][key] = input.value;
+                    }
                 });
+
                 try {
                     await setDoc(doc(db, "appState", "assignmentsConfig"), newConfig, { merge: true });
                     console.log("Configurações salvas com sucesso!");
@@ -1457,3 +1467,4 @@
 
 </body>
 </html>
+
