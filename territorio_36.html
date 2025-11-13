@@ -8,7 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f7fafc; }
+        /* Fundo da página - bg-gray-300 */
+        body { font-family: 'Inter', sans-serif; background-color: #D1D5DB; }
         #app-container { padding-bottom: 120px; /* Space for the legend */ }
         .house-box {
             transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
@@ -30,6 +31,24 @@
         .legend {
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         }
+
+        /* === Animação de Pulse Adicionada === */
+        @keyframes pulse-discreet {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.08); /* Um pouco maior para ser visível */
+                opacity: 0.8; /* Um pouco transparente */
+            }
+        }
+        .animate-pulse-discreet {
+            /* Duração de 2.5s para ser mais lenta e discreta */
+            animation: pulse-discreet 2.5s infinite;
+        }
+        /* ===================================== */
+
     </style>
 </head>
 <body class="text-gray-800">
@@ -38,6 +57,7 @@
     <div id="notification-container" class="fixed top-4 right-4 z-[100] space-y-2"></div>
 
     <!-- Container da Aplicação -->
+    <!-- O padding p-4 foi movido para dentro das funções renderListView, etc. -->
     <div id="app-container" class="container mx-auto max-w-lg"></div>
     
     <!-- Legenda Fixa -->
@@ -92,6 +112,7 @@
 
         const TERRITORY_ID = "36";
 
+        // *** IMPORTANTE: Substitua pela sua configuração real do Firebase ***
         const firebaseConfig = {
             apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
             authDomain: "quadrascasas.firebaseapp.com",
@@ -101,6 +122,7 @@
             appId: "1:1088979227180:web:fbf72a87b811236efeb789",
             measurementId: "G-YEQ216076G"
         };
+        // *******************************************************************
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -110,7 +132,7 @@
             try {
                 await signInAnonymously(auth);
             } catch(error) {
-                document.getElementById('app-container').innerHTML = `<p class="text-red-500 text-center p-4">Erro de autenticação.</p>`;
+                document.getElementById('app-container').innerHTML = `<div class="p-4"><p class="text-red-500 text-center p-4 bg-white rounded-lg">Erro de autenticação.</p></div>`;
                 console.error("Authentication failed:", error);
                 return;
             }
@@ -139,7 +161,7 @@
                     currentTerritoryData = docSnap.data();
                     handleRouteChange();
                 } else {
-                    appContainer.innerHTML = `<p class="text-center p-4">Território ${TERRITORY_ID} não encontrado.</p>`;
+                    appContainer.innerHTML = `<div class="p-4"><p class="text-center p-4 bg-white rounded-lg">Território ${TERRITORY_ID} não encontrado.</p></div>`;
                 }
             });
             
@@ -188,13 +210,23 @@
                 
                 appContainer.innerHTML = `
                     <div class="p-4">
-                         <div class="bg-blue-100 text-blue-800 p-6 rounded-2xl mb-6 flex justify-between items-start shadow-sm">
-                            <div>
+                         <!-- Cabeçalho com nova cor, layout de cartão e botão de voltar -->
+                         <div class="bg-gray-800 text-gray-100 p-6 rounded-2xl mb-6 flex justify-between items-start shadow-sm relative">
+                            <!-- Botão Voltar -->
+                            <a href="portaldeterritorios.html" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white" title="Voltar ao Portal">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                            </a>
+                            <div class="pl-10"> <!-- Padding para o botão de voltar -->
                                 <h1 class="text-2xl font-bold">Olá Publicador(a),</h1>
-                                <p>Preencha as casas da quadra onde você falou!</p>
+                                <p class="text-gray-300">Preencha as casas da quadra onde você falou!</p>
                                 <p class="font-bold mt-3 text-lg">${TERRITORY_ID} - ${territoryName}</p>
                             </div>
-                            <svg id="territory-map-icon" xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-500 cursor-pointer flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                            
+                            <!-- Ícone de Mapa (PULSANDO) -->
+                            <svg id="territory-map-icon" xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-300 cursor-pointer flex-shrink-0 animate-pulse-discreet" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13v-6m0 6l6-3m-6 3V7m0 0l6-3m0 0l5.447 2.724A1 1 0 0121 7.618v10.764a1 1 0 01-1.447.894L15 17m0 0v-6m0 6l-6-3" />
+                            </svg>
+
                         </div>
                         <div class="space-y-3">${blocksHtml}</div>
                     </div>`;
@@ -209,13 +241,13 @@
                 let streetsContentHtml;
                 if (!block.streets || block.streets.length === 0) {
                     streetsContentHtml = `
-                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg shadow-md my-4 mx-4" role="alert">
+                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg shadow-md my-4" role="alert">
                             <p class="font-bold">Aviso</p>
                             <p>Ainda não temos as ruas desta quadra cadastradas. Por favor, envie para o meu whatsapp para que eu possa adicionar e atualizar. obrigado. ass: Guilherme</p>
                         </div>
                     `;
                 } else {
-                    streetsContentHtml = '<div class="p-4 space-y-3">' + block.streets.map(street => {
+                    streetsContentHtml = '<div class="space-y-3">' + block.streets.map(street => {
                         const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
                         const range = houseNumbers.length > 1 ? `${houseNumbers[0]} à ${houseNumbers[houseNumbers.length - 1]}` : (houseNumbers.length === 1 ? `Nº ${houseNumbers[0]}` : 'Nenhum número');
                         const mapLinkIcon = street.mapLink 
@@ -226,17 +258,22 @@
                 }
 
                  appContainer.innerHTML = `
-                    <div class="bg-blue-100 text-blue-800 p-6 rounded-b-3xl shadow-lg relative">
-                         <a href="#" class="absolute top-0 left-0 h-full px-5 flex items-center text-blue-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
-                         <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-blue-800">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                         </button>
-                        <div class="text-center">
-                            <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${territoryName}</h1>
-                            <p class="text-xl">Quadra ${block.name}</p>
+                    <!-- Container com p-4 para layout padrão -->
+                    <div class="p-4">
+                        <!-- Cabeçalho com nova cor e layout de cartão -->
+                        <div class="bg-gray-800 text-gray-100 p-6 rounded-2xl mb-6 shadow-lg relative">
+                             <a href="#" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
+                             <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-gray-100 hover:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                             </button>
+                            <div class="text-center">
+                                <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${territoryName}</h1>
+                                <p class="text-xl text-gray-300">Quadra ${block.name}</p>
+                            </div>
                         </div>
-                    </div>
-                    ${streetsContentHtml}`;
+                        <!-- Conteúdo das Ruas -->
+                        ${streetsContentHtml}
+                    </div>`;
             }
 
             function getStatusStyle(status) {
@@ -276,24 +313,27 @@
                     }).join('');
 
                     streetContentHtml = `
-                        <h2 class="font-bold text-gray-500 my-4">CASAS</h2>
+                        <h2 class="font-bold text-gray-500 mb-4">CASAS</h2>
                         <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">${housesGridHtml}</div>
                     `;
                 }
                 
                 appContainer.innerHTML = `
-                    <div class="bg-blue-100 text-blue-800 p-6 rounded-b-3xl shadow-lg relative">
-                        <a href="#${encodeURIComponent(blockName)}" class="absolute top-0 left-0 h-full px-5 flex items-center text-blue-800"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
-                        <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-blue-800">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        </button>
-                        <div class="text-center">
-                            <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${data.name}</h1>
-                            <p class="text-xl">Quadra ${blockName}</p>
-                            <p>${streetName}</p>
-                        </div>
-                    </div>
+                    <!-- Container com p-4 para layout padrão -->
                     <div class="p-4">
+                        <!-- Cabeçalho com nova cor e layout de cartão -->
+                        <div class="bg-gray-800 text-gray-100 p-6 rounded-2xl mb-6 shadow-lg relative">
+                            <a href="#${encodeURIComponent(blockName)}" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
+                            <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-gray-100 hover:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </button>
+                            <div class="text-center">
+                                <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${data.name}</h1>
+                                <p class="text-xl text-gray-300">Quadra ${blockName}</p>
+                                <p class="text-gray-300">${streetName}</p>
+                            </div>
+                        </div>
+                        <!-- Conteúdo das Casas -->
                         ${streetContentHtml}
                     </div>`;
             }
@@ -409,4 +449,3 @@
 
 </body>
 </html>
-
