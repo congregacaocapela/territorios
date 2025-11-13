@@ -1,0 +1,15 @@
+# 1. Substitua "meu-projeto" pelo nome real que você quer dar
+name = "destaques"
+
+# 2. A data de compatibilidade que vimos no log
+compatibility_date = "2025-11-13"
+
+# 3. A parte MAIS IMPORTANTE que o novo log revelou:
+# Ele precisa servir os arquivos estáticos da pasta "./dist".
+# Esta é a sintaxe .toml para "ativos": {"diretório": "./dist"}
+[site]
+bucket = "./dist"
+
+# 4. Se você também tiver um SCRIPT (como uma API), descomente a linha abaixo
+# e aponte para o seu arquivo principal.
+# main = "src/index.js"
