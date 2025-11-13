@@ -1,0 +1,27 @@
+{
+  "name": "Portal de Territórios",
+  "short_name": "Territórios",
+  "description": "Aplicativo para visualização dos territórios.",
+  "start_url": "portaldeterritorios.html",
+  "display": "standalone",
+  "background_color": "#D1D5DB",
+  "theme_color": "#1F2937",
+  "icons": [
+    {
+      "src": "icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

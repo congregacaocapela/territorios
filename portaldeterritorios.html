@@ -4,29 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal de Territórios</title>
+
+    <!-- === Tags PWA Adicionadas === -->
+    <!-- Cor principal do app (barra de status no mobile) -->
+    <meta name="theme-color" content="#1F2937">
+    <!-- Link para o Manifesto -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Ícone para dispositivos Apple -->
+    <link rel="apple-touch-icon" href="icon-180x180.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- ============================= -->
+
     <link id="favicon" rel="icon" href="favicon.png" type="image/png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
-            background-color: #f3f4f6;
+            /* Fundo da página - bg-gray-300 */
+            background-color: #D1D5DB; 
         }
         .card-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem;
         }
+        /* Garante que o modal não cause scroll na página principal */
+        body.modal-open {
+            overflow: hidden;
+        }
     </style>
 </head>
 <body class="text-gray-800">
 
     <!-- Cabeçalho Fixo -->
-    <header class="bg-blue-100 shadow-md sticky top-0 z-40">
+    <header class="bg-gray-800 shadow-md sticky top-0 z-40">
         <div class="container mx-auto px-4 sm:px-6 py-4 flex justify-center items-center">
             <div class="text-center px-4">
-                <h1 class="text-2xl sm:text-3xl font-bold text-blue-800">Territórios</h1>
-                <p class="text-sm sm:text-base text-blue-700 mt-1">Selecione um território para visualizar os detalhes.</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-100">Territórios</h1>
+                <p class="text-sm sm:text-base text-gray-300 mt-1">Selecione um território para visualizar os detalhes.</p>
             </div>
         </div>
     </header>
@@ -38,14 +55,95 @@
         </div>
     </main>
 
-    <!-- Botão Fixo do WhatsApp -->
-    <a href="https://wa.me/5515991203419" target="_blank" rel="noopener noreferrer" class="fixed bottom-6 right-6 text-green-500 p-3 hover:text-green-600 transition-colors z-50" title="Contato via WhatsApp">
+    <!-- Modal da Imagem -->
+    <div id="image-modal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex justify-center items-center p-4" onclick="closeModalOutside(event)">
+        <!-- Container para a imagem, permitindo scroll (pan) e zoom (pinch-to-zoom mobile) -->
+        <div id="modal-content" class="relative max-w-full max-h-full overflow-auto rounded-lg bg-gray-900">
+             <img id="modal-image" src="" alt="Imagem do Território" class="w-auto h-auto max-w-full max-h-full block rounded-md">
+        </div>
+        
+        <!-- Botão "X" preto para ser visível em imagens claras -->
+        <button id="close-modal-btn" class="absolute top-4 right-6 text-black text-5xl font-bold hover:text-gray-700 transition-colors z-10" onclick="closeModal(); event.stopPropagation();">&times;</button>
+    </div>
+
+
+    <!-- Botão Fixo do WhatsApp (com z-index 40 para ficar abaixo do modal z-50) -->
+    <a href="https://wa.me/5515981072147" target="_blank" rel="noopener noreferrer" class="fixed bottom-6 right-6 text-green-500 p-3 hover:text-green-600 transition-colors z-40" title="Contato via WhatsApp">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="currentColor" viewBox="0 0 16 16">
             <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.89 7.89 0 0 0 13.6 2.326zM7.994 14.521a6.57 6.57 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
         </svg>
     </a>
 
     <script>
+        // --- Funções do Modal (Globais) ---
+        
+        function openModal(territoryId) {
+            const modal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalContent = document.getElementById('modal-content');
+
+            if (!modal || !modalImage || !modalContent) {
+                console.error('Modal elements not found');
+                return;
+            }
+            
+            modalContent.scrollTop = 0;
+            modalContent.scrollLeft = 0;
+
+            const showModal = () => {
+                document.body.classList.add('modal-open');
+                modal.classList.remove('hidden');
+            };
+
+            const tryJpg = () => {
+                modalImage.onload = showModal; 
+                modalImage.onerror = showPlaceholder; 
+                // As imagens são carregadas SEM o underscore
+                modalImage.src = `territorio${territoryId}.jpg`; 
+            };
+
+            const showPlaceholder = () => {
+                console.warn(`Imagem para o território ${territoryId} não encontrada (tentou .png e .jpg)`);
+                const placeholderSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="394" height="294" rx="2" ry="2" fill="%23374151"></rect><circle cx="120" cy="100" r="20" fill="%239CA3AF"></circle><path d="M180 220l-60-60-90 90" stroke="%239CA3AF"></path><line x1="1" y1="1" x2="399" y2="299" stroke="%23F87171" stroke-width="4"></line><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%23F3F4F6">Imagem não encontrada</text></svg>`;
+                
+                modalImage.onload = null; 
+                modalImage.onerror = null;
+                
+                modalImage.src = placeholderSvg;
+                showModal(); 
+            };
+
+            // --- Início da Execução ---
+            modalImage.onload = showModal; 
+            modalImage.onerror = tryJpg; 
+            // As imagens são carregadas SEM o underscore
+            modalImage.src = `territorio${territoryId}.png`; 
+        }
+
+
+        function closeModal() {
+            const modal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            if (modalImage) {
+                modalImage.onload = null;
+                modalImage.onerror = null;
+                modalImage.src = ''; 
+            }
+            document.body.classList.remove('modal-open');
+        }
+
+        // Fecha o modal se o clique for no backdrop (fundo escuro)
+        function closeModalOutside(event) {
+            if (event.target.id === 'image-modal') {
+                closeModal();
+            }
+        }
+
+        // --- Lógica Principal ---
         document.addEventListener('DOMContentLoaded', () => {
             // Lógica para carregar o favicon
             const faviconTag = document.getElementById('favicon');
@@ -85,35 +183,65 @@
 
             for (let i = 1; i <= 50; i++) {
                 const card = document.createElement('a');
+                // O link do card (href) volta a ter o underscore
                 card.href = `territorio_${i}.html`;
                 card.target = "_blank";
                 card.rel = "noopener noreferrer";
 
+                // Alterna entre branco e cinza mais escuro (bg-gray-200)
                 const isEven = (i - 1) % 2 === 0;
-                const bgColor = isEven ? 'bg-white' : 'bg-blue-100';
-                const titleColor = isEven ? 'text-gray-800' : 'text-blue-800';
-                const subTitleColor = isEven ? 'text-blue-600' : 'text-blue-700';
+                const bgColor = isEven ? 'bg-white' : 'bg-gray-200';
+                
+                // Cores de texto padronizadas (escuras)
+                const titleColor = 'text-gray-900';
+                const subTitleColor = 'text-gray-500';
                 
                 const territoryName = territoryNames[i] || `Território ${String(i).padStart(2, '0')}`;
 
                 card.className = `${bgColor} p-6 rounded-2xl shadow-lg flex items-center justify-between transition-transform transform hover:-translate-y-1 hover:shadow-xl`;
                 
+                // Adiciona o container de ícones com o botão de olho e o link
                 card.innerHTML = `
                     <div>
                         <span class="text-sm font-semibold ${subTitleColor}">TERRITÓRIO ${String(i).padStart(2, '0')}</span>
                         <h2 class="text-xl font-bold ${titleColor} mt-1">${territoryName}</h2>
                     </div>
-                    <div class="text-blue-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
+                    
+                    <!-- Container de Ícones -->
+                    <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+                        <!-- Botão do Modal (Olho) -->
+                        <button onclick="event.preventDefault(); event.stopPropagation(); openModal(${i})" class="text-gray-500 hover:text-blue-600 p-2 rounded-full hover:bg-gray-300 transition-colors" title="Ver Imagem">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                        <!-- Ícone de Link (Seta) -->
+                        <div class="text-blue-600 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
             }
+
+            // --- === Registro do Service Worker Adicionado === ---
+            if ('serviceWorker' in navigator) {
+                // Registra o sw.js
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registrado com sucesso:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Falha ao registrar o Service Worker:', error);
+                    });
+            }
+            // ===================================================
+
         });
     </script>
 
 </body>
 </html>
-
