@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Controle de Territórios</title>
+    
+    <!-- PWA: Link para o Manifest -->
+    <link rel="manifest" href="manifest1.json">
+    <!-- PWA: Cor do tema para a barra do navegador (Android) -->
+    <meta name="theme-color" content="#1f2937">
+    <!-- PWA: Ícone para iOS -->
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/4f46e5/ffffff?text=PT">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -136,8 +144,9 @@
 
         <div id="territory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
         
-        <div class="mt-8 text-center border-t pt-6">
-            <button id="reset-territories-btn" class="w-full sm:w-auto bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Todos os Territórios</button>
+        <div class="mt-8 text-center border-t pt-6 flex flex-col sm:flex-row justify-center gap-4">
+            <button id="reset-archived-btn" class="w-full sm:w-auto bg-yellow-500 text-white font-semibold py-2 px-6 rounded-md hover:bg-yellow-600">Zerar/Restaurar Arquivados</button>
+            <button id="reset-territories-btn" class="w-full sm:w-auto bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Todos (Exceto Pessoais)</button>
         </div>
     </div>
 
@@ -181,7 +190,32 @@
 
     <!-- Modais -->
     <div id="status-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md"><div class="p-6 border-b flex justify-between items-center"><h2 id="status-modal-title" class="text-2xl font-bold"></h2><button id="close-status-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div class="p-6 max-h-[60vh] overflow-y-auto modal-body"><div id="status-modal-blocks-container" class="space-y-3"></div></div><div class="p-6 bg-gray-50 rounded-b-2xl text-right"><button id="save-status-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Fechar</button></div></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 id="status-modal-title" class="text-2xl font-bold"></h2>
+                <button id="close-status-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div class="p-6 max-h-[60vh] overflow-y-auto modal-body">
+                <!-- Seção de Designação Pessoal -->
+                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200 mb-6">
+                    <h4 class="text-lg font-semibold text-indigo-800 mb-3">Designação Pessoal</h4>
+                    <label for="personal-assignment-select" class="block text-sm font-medium text-gray-700 mb-1">Designar para:</label>
+                    <select id="personal-assignment-select" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white"></select>
+                    <div class="flex gap-2 mt-3">
+                        <button id="save-personal-btn" class="flex-1 bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700">Salvar</button>
+                        <button id="remove-personal-btn" class="flex-1 bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md hover:bg-gray-400">Remover</button>
+                    </div>
+                </div>
+
+                <!-- Seção de Quadras -->
+                <div id="status-modal-blocks-container" class="space-y-3">
+                    <!-- Conteúdo gerado por JS -->
+                </div>
+            </div>
+            <div class="p-6 bg-gray-50 rounded-b-2xl text-right">
+                <button id="save-status-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Fechar</button>
+            </div>
+        </div>
     </div>
     <div id="selection-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg"><div class="p-6 border-b flex justify-between items-center"><h2 id="selection-modal-title" class="text-2xl font-bold"></h2><button id="close-selection-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button></div><div id="selection-modal-body" class="p-6 max-h-[60vh] overflow-y-auto modal-body grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div><div class="p-6 bg-gray-50 rounded-b-2xl text-right"><button id="confirm-selection-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Confirmar</button></div></div>
@@ -229,7 +263,7 @@
                         </div>
                     </div>
                     <div id="territory-management-list-container" class="mt-4 space-y-2">
-                        <!-- Lista de territórios será renderizada aqui pelo JS -->
+                        <!-- Lista de territórios será renderizada here pelo JS -->
                     </div>
                     <!-- FIM: Seção de Gerenciamento de Territórios -->
 
@@ -357,7 +391,14 @@
             territoryLinks: {},
             state: { 
                 config: {},
-                status: {}, weekdaySelections: {}, weekendSelections: {}, archived: [], mode: 'weekday', showArchived: false, assignmentLog: {},
+                status: {}, 
+                weekdaySelections: {}, 
+                weekendSelections: {}, 
+                archived: [], 
+                mode: 'weekday', 
+                showArchived: false, 
+                assignmentLog: {},
+                personalAssignments: {}, // NOVO: Armazena designações pessoais { "1": "Marcia" }
                 selectedDate: new Date(),
                 history: []
             },
@@ -371,6 +412,7 @@
                 gridTitle: document.getElementById('grid-title'), weekDates: document.getElementById('week-dates'),
                 weekPicker: document.getElementById('week-picker'),
                 resetTerritoriesBtn: document.getElementById('reset-territories-btn'),
+                resetArchivedBtn: document.getElementById('reset-archived-btn'),
                 clearAssignmentsBtn: document.getElementById('clear-assignments-btn'),
                 settingsModal: document.getElementById('settings-modal'),
                 openSettingsBtn: document.getElementById('open-settings-modal-btn'),
@@ -426,6 +468,21 @@
                         setDoc(doc(db, "appState", "territoryList"), { territories: defaultTerritories });
                     }
                     
+                    // Sincroniza o status (na memória) com a nova lista de territórios
+                    this.data.forEach(t => {
+                        if (!this.state.status[t.id]) {
+                            // Se o território não tem *nenhuma* entrada de status, cria uma
+                            this.state.status[t.id] = {};
+                            console.log(`Inicializando status para território ${t.id}`);
+                        }
+                        // Garante que *todas* as quadras (blocks) de 'this.data' tenham um valor (true/false)
+                        t.blocks.forEach(b => {
+                            if (this.state.status[t.id][b] === undefined) {
+                                this.state.status[t.id][b] = false; // Define como 'false' (pendente) se for indefinido
+                            }
+                        });
+                    });
+
                     // Sincroniza com o app S-13
                     const maxTerritoryId = this.data.length > 0 ? Math.max(...this.data.map(t => t.id)) : 0;
                     s13App.config.numTerritories = maxTerritoryId;
@@ -449,8 +506,24 @@
                     this.state.weekendSelections = mainState.weekendSelections || {};
                     this.state.archived = mainState.archived || [];
                     this.state.assignmentLog = mainState.assignmentLog || {};
+                    this.state.personalAssignments = mainState.personalAssignments || {}; // NOVO: Carrega designações pessoais
                     this.state.mode = mainState.mode || 'weekday';
-                    this.data.forEach(t => { if (!this.state.status[t.id]) { this.state.status[t.id] = {}; t.blocks.forEach(b => { this.state.status[t.id][b] = false; }); } });
+
+                    // Sincroniza o status com a lista de territórios atual
+                    this.data.forEach(t => {
+                        if (!this.state.status[t.id]) {
+                            // Se o território não tem *nenhuma* entrada de status, cria uma
+                            this.state.status[t.id] = {};
+                            console.log(`Inicializando status para território ${t.id}`);
+                        }
+                        // Garante que *todas* as quadras (blocks) de 'this.data' tenham um valor (true/false)
+                        t.blocks.forEach(b => {
+                            if (this.state.status[t.id][b] === undefined) {
+                                this.state.status[t.id][b] = false; // Define como 'false' (pendente) se for indefinido
+                            }
+                        });
+                    });
+
                     this.renderAll();
                 });
 
@@ -489,6 +562,7 @@
                         weekendSelections: this.state.weekendSelections,
                         archived: this.state.archived,
                         assignmentLog: this.state.assignmentLog,
+                        personalAssignments: this.state.personalAssignments, // NOVO: Salva designações pessoais
                         mode: this.state.mode
                     };
                     await setDoc(doc(db, "appState", "mainState"), mainStateData, { merge: true });
@@ -516,11 +590,36 @@
                 const isArchived = this.state.archived.includes(t.id);
                 card.className = `territory-card bg-white p-5 rounded-2xl shadow-md flex flex-col transition-all duration-300 ${isArchived ? 'opacity-70' : 'hover:shadow-xl hover:-translate-y-1'}`;
                 card.dataset.territoryId = t.id;
+                
                 const p = this.getTerritoryProgress(t.id);
+                const personalName = this.state.personalAssignments[t.id];
+                
+                let personalBadge = '';
+                if (personalName) {
+                    personalBadge = `
+                    <div class="flex items-center gap-1 mt-2 text-xs font-semibold text-indigo-700 bg-indigo-100 px-2 py-1 rounded-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>${personalName}</span>
+                    </div>`;
+                }
+
                 let actionButton = '';
                 if (isArchived) { actionButton = `<button class="restore-btn mt-4 w-full bg-green-100 text-green-700 font-semibold py-2 px-4 rounded-lg hover:bg-green-200" data-id="${t.id}">Restaurar</button>`; }
                 else if (p.progress === 100) { actionButton = `<button class="archive-btn mt-4 w-full bg-blue-100 text-blue-700 font-semibold py-2 px-4 rounded-lg hover:bg-blue-200" data-id="${t.id}">Arquivar</button>`; }
-                card.innerHTML = `<div class="flex-grow cursor-pointer" data-action="open-status"><div class="flex justify-between items-start"><h3 class="text-xl font-bold text-gray-900">Território ${t.id}</h3><span class="status-badge text-xs font-semibold ${p.textColorClass} ${p.bgColorClass} px-2 py-1 rounded-full">${p.statusText}</span></div><p class="text-sm text-gray-500 mt-1">${p.completedCount} de ${p.totalCount} quadras</p><div class="w-full bg-gray-200 rounded-full h-2.5 mt-4"><div class="${p.statusColorClass} h-2.5 rounded-full" style="width: ${p.progress}%"></div></div></div>${actionButton}`;
+                
+                card.innerHTML = `
+                    <div class="flex-grow cursor-pointer" data-action="open-status">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xl font-bold text-gray-900">Território ${t.id}</h3>
+                            <span class="status-badge text-xs font-semibold ${p.textColorClass} ${p.bgColorClass} px-2 py-1 rounded-full">${p.statusText}</span>
+                        </div>
+                        ${personalBadge} <!-- Badge pessoal inserido aqui -->
+                        <p class="text-sm text-gray-500 mt-3">${p.completedCount} de ${p.totalCount} quadras</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                            <div class="${p.statusColorClass} h-2.5 rounded-full" style="width: ${p.progress}%"></div>
+                        </div>
+                    </div>
+                    ${actionButton}`;
                 return card;
             },
             getTerritoryProgress(id) {
@@ -675,8 +774,18 @@
                 const t = this.data.find(td => td.id === id); const modal = this.ui.statusModal;
                 if (!t) { customAlert("Território não encontrado."); return; }
                 modal.querySelector('#status-modal-title').textContent = `Território ${t.id}`; modal.dataset.currentTerritoryId = id;
+                
+                // NOVO: Lógica para Designação Pessoal
+                const select = modal.querySelector('#personal-assignment-select');
+                select.innerHTML = '<option value="">Ninguém (Padrão)</option>';
+                s13App.state.publicadores.forEach(name => {
+                    select.innerHTML += `<option value="${name}">${name}</option>`;
+                });
+                select.value = this.state.personalAssignments[id] || "";
+                
+                // Lógica antiga das Quadras
                 const container = modal.querySelector('#status-modal-blocks-container');
-                container.innerHTML = `<div class="flex items-center justify-between bg-gray-200 p-3 rounded-lg border-b-2 border-gray-300 mb-3"><label for="select-all-blocks" class="font-bold text-gray-700">Marcar Todas</label><input type="checkbox" id="select-all-blocks" class="h-6 w-6 rounded text-blue-600"></div>`;
+                container.innerHTML = `<div class="flex items-center justify-between bg-gray-200 p-3 rounded-lg border-b-2 border-gray-300 mb-3"><label for="select-all-blocks" class="font-bold text-gray-700">Marcar Todas as Quadras</label><input type="checkbox" id="select-all-blocks" class="h-6 w-6 rounded text-blue-600"></div>`;
                 const wrapper = document.createElement('div'); wrapper.className = 'space-y-3'; let allChecked = true;
                 t.blocks.forEach(block => {
                     const isChecked = this.state.status[id] && this.state.status[id][block]; if (!isChecked) allChecked = false;
@@ -688,16 +797,39 @@
                 const modal = this.ui.selectionModal; modal.dataset.currentKey = key;
                 modal.querySelector('#selection-modal-title').textContent = `Selecionar para ${key}`;
                 const container = modal.querySelector('#selection-modal-body'); container.innerHTML = '';
+                
                 const allSelections = Object.values(this.state.weekdaySelections).flat().concat(Object.values(this.state.weekendSelections).map(v => Array.isArray(v) ? v : (v.territories || [])).flat());
+                
                 let currentSelections = [];
                 if (this.state.mode === 'weekday') currentSelections = this.state.weekdaySelections[key] || [];
                 else currentSelections = key === 'DOMINGO' ? (this.state.weekendSelections[key] || {territories:[]}).territories : (this.state.weekendSelections[key] || []);
+                
                 const available = this.data.filter(t => !this.state.archived.includes(t.id));
                 available.forEach(t => {
                     const isSelectedElsewhere = allSelections.includes(t.id) && !currentSelections.includes(t.id);
+                    const personalName = this.state.personalAssignments[t.id];
+                    const isPersonal = !!personalName;
+                    
+                    const isDisabled = isSelectedElsewhere || isPersonal;
                     const isSelectedHere = currentSelections.includes(t.id);
-                    container.innerHTML += `<label class="flex items-center p-3 rounded-lg ${isSelectedElsewhere ? 'bg-gray-200 cursor-not-allowed text-gray-400' : 'bg-gray-100 hover:bg-gray-200 cursor-pointer'}"><input type="checkbox" value="${t.id}" ${isSelectedHere ? 'checked' : ''} ${isSelectedElsewhere ? 'disabled' : ''} class="h-5 w-5"><span class="ml-3 font-medium">Território ${t.id}</span></label>`;
+                    
+                    let personalText = '';
+                    if(isPersonal) personalText = `<span class="text-xs text-indigo-600 block truncate">(Pessoal: ${personalName})</span>`;
+                    
+                    const labelClass = isDisabled 
+                        ? 'bg-gray-200 cursor-not-allowed text-gray-400' 
+                        : 'bg-gray-100 hover:bg-gray-200 cursor-pointer';
+
+                    container.innerHTML += `
+                        <label class="flex items-center p-3 rounded-lg ${labelClass}">
+                            <input type="checkbox" value="${t.id}" ${isSelectedHere ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} class="h-5 w-5">
+                            <span class="ml-3 font-medium">
+                                Território ${t.id}
+                                ${personalText}
+                            </span>
+                        </label>`;
                 });
+
                 if (key === 'DOMINGO') {
                     container.innerHTML += `<h3 class="col-span-full font-bold text-lg mt-4 border-t pt-4">Territórios Rurais</h3>`;
                     this.state.config.rural.forEach(r => {
@@ -905,14 +1037,27 @@
                     const territoryCard = e.target.closest('.territory-card');
                     if (territoryCard) {
                         const id = parseInt(territoryCard.dataset.territoryId);
-                        if (e.target.closest('[data-action="open-status"]')) this.openStatusModal(id);
+                        if (e.target.closest('[data-action="open-status"]')) {
+                            this.openStatusModal(id);
+                        }
                         else if (e.target.classList.contains('archive-btn')) { 
-                            const success = await this.triggerS13Update(id);
-                            if (success) {
+                            const isPersonal = this.state.personalAssignments[id];
+                            if (isPersonal) {
+                                // É pessoal, apenas arquiva sem S-13
                                 if (!this.state.archived.includes(id)) {
                                     this.state.archived.push(id);
                                 }
                                 await this.saveState(); 
+                                console.log(`Território pessoal ${id} arquivado.`);
+                            } else {
+                                // Lógica original: dispara S-13
+                                const success = await this.triggerS13Update(id);
+                                if (success) {
+                                    if (!this.state.archived.includes(id)) {
+                                        this.state.archived.push(id);
+                                    }
+                                    await this.saveState(); 
+                                }
                             }
                         }
                         else if (e.target.classList.contains('restore-btn')) { 
@@ -961,27 +1106,78 @@
                             `Tem certeza que deseja remover o território ${id}? Esta ação não pode ser desfeita.`,
                             () => {
                                 this.data = this.data.filter(t => t.id !== id);
-                                this.saveTerritories(); // Isso aciona o snapshot e re-renderiza a UI
+                                // NOVO: Também remove de designações pessoais se existir
+                                if (this.state.personalAssignments[id]) {
+                                    delete this.state.personalAssignments[id];
+                                    this.saveState(); // Salva a remoção do personalAssignments
+                                }
+                                this.saveTerritories(); // Salva a lista de territórios atualizada
                             }
                         );
                     }
                 });
 
                 document.body.addEventListener('input', (e) => { if (e.target.id === 'sunday-name-select') { this.state.weekendSelections.DOMINGO.name = e.target.value; this.saveState(); } });
+                
                 this.ui.toggleArchivedBtn.addEventListener('click', () => {
                     this.state.showArchived = !this.state.showArchived;
                     this.ui.toggleArchivedBtn.textContent = this.state.showArchived ? 'Mostrar Ativos' : 'Mostrar Arquivados';
                     this.ui.gridTitle.textContent = this.state.showArchived ? 'Territórios Arquivados' : 'Territórios Ativos';
                     this.renderGrid();
                 });
+
+                // Listener de EVENTOS para o modal de STATUS (Quadras + Pessoal)
+                this.ui.statusModal.addEventListener('click', async (e) => {
+                    const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
+                    if (!id) return;
+
+                    // Botão Salvar Designação Pessoal
+                    if (e.target.id === 'save-personal-btn') {
+                        const select = this.ui.statusModal.querySelector('#personal-assignment-select');
+                        const name = select.value;
+                        if (name) {
+                            this.state.personalAssignments[id] = name;
+                            await this.saveState();
+                            customAlert(`Território ${id} salvo para ${name}.`);
+                            this.closeAllModals();
+                        } else {
+                            customAlert("Por favor, selecione um nome para salvar.");
+                        }
+                    }
+
+                    // Botão Remover Designação Pessoal
+                    if (e.target.id === 'remove-personal-btn') {
+                        if (this.state.personalAssignments[id]) {
+                            delete this.state.personalAssignments[id];
+                            await this.saveState();
+                            customAlert(`Designação pessoal removida do Território ${id}.`);
+                            this.closeAllModals();
+                        } else {
+                            customAlert("Este território não possui designação pessoal.");
+                        }
+                    }
+
+                    // Botão Fechar (Salvar Status)
+                    if (e.target.id === 'save-status-btn') {
+                        this.closeAllModals();
+                        this.renderGrid(); // Re-renderiza a grade para mostrar o status atualizado
+                    }
+                });
+                
+                // Listener de MUDANÇAS para as checkboxes no modal de status
                 this.ui.statusModal.addEventListener('change', (e) => {
                     const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
-                    if (!this.state.status[id]) this.state.status[id] = {};
-                    const cbs = this.ui.statusModal.querySelectorAll('.block-checkbox');
-                    if (e.target.id === 'select-all-blocks') { cbs.forEach(cb => { cb.checked = e.target.checked; this.state.status[id][cb.dataset.block] = e.target.checked; }); }
-                    else { this.state.status[id][e.target.dataset.block] = e.target.checked; this.ui.statusModal.querySelector('#select-all-blocks').checked = Array.from(cbs).every(cb => cb.checked); }
-                    this.saveState();
+                    if (!id) return;
+
+                    if (e.target.classList.contains('block-checkbox') || e.target.id === 'select-all-blocks') {
+                        if (!this.state.status[id]) this.state.status[id] = {};
+                        const cbs = this.ui.statusModal.querySelectorAll('.block-checkbox');
+                        if (e.target.id === 'select-all-blocks') { cbs.forEach(cb => { cb.checked = e.target.checked; this.state.status[id][cb.dataset.block] = e.target.checked; }); }
+                        else { this.state.status[id][e.target.dataset.block] = e.target.checked; this.ui.statusModal.querySelector('#select-all-blocks').checked = Array.from(cbs).every(cb => cb.checked); }
+                        this.saveState();
+                    }
                 });
+
                 this.ui.selectionModal.querySelector('#confirm-selection-btn').addEventListener('click', () => {
                     const key = this.ui.selectionModal.dataset.currentKey;
                     const ids = Array.from(this.ui.selectionModal.querySelectorAll('input:checked')).map(cb => isNaN(parseInt(cb.value)) ? cb.value : parseInt(cb.value));
@@ -1002,8 +1198,15 @@
                         if(closeBtn) closeBtn.addEventListener('click', () => this.closeAllModals());
                     }
                 });
-                this.ui.statusModal.querySelector('#save-status-btn').addEventListener('click', () => { this.closeAllModals(); this.renderGrid(); });
-                this.ui.resetTerritoriesBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Territórios', 'Tem certeza que deseja zerar todos os territórios? Esta ação irá restaurar os arquivados e marcar todas as quadras como pendentes.', () => this.resetTerritories()));
+                // this.ui.statusModal.querySelector('#save-status-btn').addEventListener('click', () => { this.closeAllModals(); this.renderGrid(); }); // Movido para listener de click separado
+                
+                this.ui.resetArchivedBtn.addEventListener('click', () => mainNav.showConfirmationModal(
+                    'Zerar/Restaurar Arquivados', 
+                    'Tem certeza que deseja zerar o progresso e restaurar TODOS os territórios arquivados? O progresso dos territórios ativos não será alterado.', 
+                    () => this.resetArchivedTerritories()
+                ));
+
+                this.ui.resetTerritoriesBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Territórios', 'Tem certeza que deseja zerar todos os territórios? Esta ação irá restaurar os arquivados e marcar todas as quadras como pendentes (exceto territórios com designação pessoal).', () => this.resetTerritories()));
                 
                 this.ui.clearAssignmentsBtn.addEventListener('click', () => {
                     const modeText = this.state.mode === 'weekday' ? 'dos dias de semana' : 'do final de semana';
@@ -1014,9 +1217,44 @@
                     );
                 });
             },
+
+            async resetArchivedTerritories() {
+                const territoriesToReset = [...this.state.archived]; // Pega a lista de arquivados
+                
+                if (territoriesToReset.length === 0) {
+                    customAlert("Não há territórios arquivados para zerar.");
+                    return;
+                }
+
+                this.data.forEach(t => {
+                    if (territoriesToReset.includes(t.id)) {
+                        // 1. Zera o status (progresso)
+                        this.state.status[t.id] = {}; 
+                        t.blocks.forEach(b => { this.state.status[t.id][b] = false; });
+                    }
+                });
+
+                // 2. Remove TODOS da lista de arquivados
+                // (Filtra para manter apenas os que NÃO estavam na lista territoriesToReset)
+                this.state.archived = this.state.archived.filter(id => !territoriesToReset.includes(id));
+
+                await this.saveState();
+                customAlert("Todos os territórios arquivados foram zerados e restaurados.");
+            },
+
             async resetTerritories() {
-                this.data.forEach(t => { this.state.status[t.id] = {}; t.blocks.forEach(b => { this.state.status[t.id][b] = false; }); });
-                this.state.archived = [];
+                this.data.forEach(t => {
+                    // SÓ zera o status se NÃO for pessoal
+                    if (!this.state.personalAssignments[t.id]) { 
+                        this.state.status[t.id] = {}; 
+                        t.blocks.forEach(b => { this.state.status[t.id][b] = false; });
+                    }
+                });
+
+                // SÓ remove de arquivados se NÃO for pessoal
+                const personalAndArchived = this.state.archived.filter(id => this.state.personalAssignments[id]);
+                this.state.archived = personalAndArchived; // Mantém apenas os pessoais que estavam arquivados
+
                 this.state.assignmentLog = {};
                 Object.keys(this.state.weekdaySelections).forEach(k => this.state.weekdaySelections[k] = []);
                 Object.keys(this.state.weekendSelections).forEach(k => {
@@ -1046,6 +1284,7 @@
                 await this.saveState();
             },
             async triggerS13Update(territoryId) {
+                // Esta função agora SÓ é chamada para territórios NÃO pessoais.
                 const assignment = this.state.assignmentLog[territoryId];
                 if (!assignment) {
                     customAlert(`Não é possível arquivar. A designação para o território ${territoryId} não foi registrada. Por favor, gere a mensagem de designação primeiro.`);
@@ -1099,7 +1338,10 @@
                             const assignmentDateString = assignmentDate.toISOString().split('T')[0];
 
                             selections.forEach(id => {
-                                this.state.assignmentLog[id] = { name: person, date: assignmentDateString };
+                                // SÓ registra no log se não for pessoal
+                                if (!this.state.personalAssignments[id]) {
+                                    this.state.assignmentLog[id] = { name: person, date: assignmentDateString };
+                                }
                                 if (typeof id === 'number') allDesignatedTerritories.push(id);
                             });
                             const territoryNumbers = selections.map(getTerritoryLine).join(', ');
@@ -1119,7 +1361,10 @@
                             if (selections && selections.length > 0) {
                                 hasAssignments = true;
                                 selections.forEach(id => { 
-                                    this.state.assignmentLog[id] = { name: key, date: saturdayDate.toISOString().split('T')[0] }; 
+                                    // SÓ registra no log se não for pessoal
+                                    if (!this.state.personalAssignments[id]) {
+                                        this.state.assignmentLog[id] = { name: key, date: saturdayDate.toISOString().split('T')[0] }; 
+                                    }
                                     if (typeof id === 'number') allDesignatedTerritories.push(id);
                                 });
                                 const territoryNumbers = selections.map(getTerritoryLine).join(', ');
@@ -1135,7 +1380,10 @@
                         const sundayName = sundaySelections.name.trim();
                         const sundayDateString = sundayDate.toISOString().split('T')[0];
                         sundaySelections.territories.forEach(id => { 
-                            this.state.assignmentLog[id] = { name: sundayName, date: sundayDateString }; 
+                            // SÓ registra no log se não for pessoal
+                            if (!this.state.personalAssignments[id]) {
+                                this.state.assignmentLog[id] = { name: sundayName, date: sundayDateString }; 
+                            }
                             if (typeof id === 'number') allDesignatedTerritories.push(id);
                         });
                         const territoryNumbers = sundaySelections.territories.map(getTerritoryLine).join(', ');
@@ -1422,6 +1670,12 @@
                 this.setupEventListeners();
                 window.addEventListener('publicadoresAtualizados', () => {
                     territoryManager.renderAssignmentCards();
+                    // NOVO: Atualiza o select de pessoal se o modal de status estiver aberto
+                    const statusModal = document.getElementById('status-modal');
+                    if (!statusModal.classList.contains('hidden')) {
+                        const id = parseInt(statusModal.dataset.currentTerritoryId);
+                        if(id) territoryManager.openStatusModal(id);
+                    }
                 });
             },
             showView(viewName) {
@@ -1465,6 +1719,21 @@
     });
     </script>
 
+    <!-- SCRIPT PWA (SERVICE WORKER) -->
+    <script>
+        // Registra o Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw1.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registrado com sucesso: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Falha ao registrar ServiceWorker: ', error);
+                    });
+            });
+        }
+    </script>
+
 </body>
 </html>
-

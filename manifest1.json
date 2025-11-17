@@ -1,0 +1,24 @@
+{
+  "name": "Painel de Territórios",
+  "short_name": "Territórios",
+  "description": "Painel de Controle para gestão de territórios.",
+  "start_url": "paineldecontrole.html",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1f2937",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/4f46e5/ffffff?text=PT",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512/4f46e5/ffffff?text=Painel",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
