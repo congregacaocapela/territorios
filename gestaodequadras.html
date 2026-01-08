@@ -8,36 +8,81 @@
     <link rel="icon" type="image/jpeg" href="favicon.jpg">
     <title>Gestão de Territórios</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            750: '#2d3748',
+                            850: '#1a202c',
+                            950: '#0d1117',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* Classe utilitária para travar o scroll do body */
+        body.overflow-hidden { overflow: hidden; }
+        
         .modal-body-scrollable::-webkit-scrollbar { width: 8px; }
         .modal-body-scrollable::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
         .modal-body-scrollable::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
         .modal-body-scrollable::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        /* Dark mode scrollbar */
+        .dark .modal-body-scrollable::-webkit-scrollbar-track { background: #374151; }
+        .dark .modal-body-scrollable::-webkit-scrollbar-thumb { background: #4b5563; }
+        .dark .modal-body-scrollable::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
         textarea { resize: vertical; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
 
     <!-- Error Banner -->
-    <div id="error-banner" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+    <div id="error-banner" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 dark:bg-red-900 dark:text-red-100 dark:border-red-400" role="alert">
         <p class="font-bold">Erro de Autenticação</p>
         <p>Não foi possível conectar ao banco de dados. Verifique se o "Login anônimo" está ativado no seu projeto Firebase.</p>
     </div>
 
     <!-- Barra de Navegação Superior -->
-    <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-40">
+    <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-40 dark:bg-gray-950">
         <div class="container mx-auto flex justify-between items-center">
-            <a href="#" id="home-btn" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors">
+            <a href="#" id="home-btn" class="bg-gray-700 hover:bg-gray-600 font-semibold py-2 px-4 rounded-lg transition-colors dark:bg-gray-800 dark:hover:bg-gray-700">
                 Início
             </a>
             <h1 class="text-lg sm:text-xl font-bold">Gestão de Territórios</h1>
             <div class="flex items-center gap-2">
-                <button id="reports-page-btn" class="text-white hover:text-gray-300 p-2 rounded-full" title="Gerar Relatório">
+                <!-- Botão de Configurações -->
+                <button id="manage-territories-btn" class="text-white hover:text-gray-300 p-2 rounded-full transition-colors" title="Gerenciar Territórios">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+
+                <!-- Dark Mode Toggle -->
+                <button id="theme-toggle-btn" class="text-white hover:text-gray-300 p-2 rounded-full transition-colors" title="Alternar Tema">
+                    <!-- Sun Icon (for dark mode) -->
+                    <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <!-- Moon Icon (for light mode) -->
+                    <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+
+                <button id="reports-page-btn" class="text-white hover:text-gray-300 p-2 rounded-full transition-colors" title="Gerar Relatório">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H3V9a4 4 0 014-4h2a4 4 0 014 4v2m-6 4h12M9 3v2a4 4 0 004 4h2a4 4 0 004-4V3m-6 4h12" /></svg>
                 </button>
-                 <button id="reset-icon-btn" class="text-white hover:text-gray-300 p-2 rounded-full" title="Zerar Progresso">
+                 <button id="reset-icon-btn" class="text-white hover:text-gray-300 p-2 rounded-full transition-colors" title="Zerar Progresso">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
             </div>
@@ -48,8 +93,9 @@
         <!-- Container da Aplicação -->
         <div class="container mx-auto p-4 sm:p-8">
             <header class="text-center mb-8 relative">
-                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Visão Geral dos Territórios</h1>
-                <p class="text-base sm:text-lg text-gray-600 mt-2">Acompanhe e edite o progresso de todos os territórios.</p>
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">Visão Geral dos Territórios</h1>
+                <p class="text-base sm:text-lg text-gray-600 mt-2 dark:text-gray-300">Acompanhe e edite o progresso de todos os territórios.</p>
+                <!-- Botão de adicionar rápido mantido para conveniência -->
                 <button id="add-territory-btn" class="absolute top-0 right-0 bg-green-500 text-white rounded-full h-12 w-12 flex items-center justify-center shadow-lg hover:bg-green-600 transition-transform hover:scale-110" title="Adicionar Novo Território">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -68,19 +114,19 @@
     <div id="reports-page" class="hidden">
          <div class="container mx-auto p-4 sm:p-8">
             <header class="text-center mb-8">
-                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">Relatórios de Casas</h1>
-                <p class="text-base sm:text-lg text-gray-600 mt-2">Filtre e visualize o status das casas ou gere uma planilha.</p>
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">Relatórios de Casas</h1>
+                <p class="text-base sm:text-lg text-gray-600 mt-2 dark:text-gray-300">Filtre e visualize o status das casas ou gere uma planilha.</p>
             </header>
             
-            <div class="bg-white p-6 rounded-2xl shadow-md max-w-4xl mx-auto">
+            <div class="bg-white p-6 rounded-2xl shadow-md max-w-4xl mx-auto dark:bg-gray-800">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                     <div>
-                        <label for="report-territory-selection" class="block text-sm font-medium text-gray-700">Territórios (ex: 1, 3-5, 8)</label>
-                        <input type="text" id="report-territory-selection" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Todos">
+                        <label for="report-territory-selection" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Territórios (ex: 1, 3-5, 8)</label>
+                        <input type="text" id="report-territory-selection" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400" placeholder="Todos">
                     </div>
                     <div>
-                         <label for="report-status-filter" class="block text-sm font-medium text-gray-700">Filtrar por Status</label>
-                         <select id="report-status-filter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                         <label for="report-status-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Filtrar por Status</label>
+                         <select id="report-status-filter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                             <option value="ALL">Todas as Casas</option>
                             <option value="DONE">Apenas Casas Feitas</option>
                             <option value="EMPTY">Apenas Casas Não Visitadas</option>
@@ -89,7 +135,7 @@
                     </div>
                 </div>
                  <div class="mt-6 flex flex-col sm:flex-row justify-end gap-4">
-                    <button id="generate-visual-report-btn" class="bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2">
+                    <button id="generate-visual-report-btn" class="bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2 dark:bg-gray-700 dark:hover:bg-gray-600">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C3.732 4.943 9.522 3 10 3s6.268 1.943 9.542 7c-3.274 5.057-9.062 7-9.542 7S3.732 15.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg>
                         <span id="generate-visual-report-btn-text">Visualizar Relatório</span>
                     </button>
@@ -100,23 +146,23 @@
                 </div>
             </div>
 
-            <div id="report-results-container" class="mt-8 bg-white p-6 rounded-2xl shadow-md max-w-4xl mx-auto">
-                 <p class="text-center text-gray-500">Clique em "Visualizar Relatório" para ver os dados aqui.</p>
+            <div id="report-results-container" class="mt-8 bg-white p-6 rounded-2xl shadow-md max-w-4xl mx-auto dark:bg-gray-800 dark:text-gray-200">
+                 <p class="text-center text-gray-500 dark:text-gray-400">Clique em "Visualizar Relatório" para ver os dados aqui.</p>
             </div>
          </div>
     </div>
     
-    <!-- Modal de Adicionar Território -->
+    <!-- Modal de Adicionar Território (Simples) -->
     <div id="add-territory-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 dark:bg-gray-800 dark:text-white">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">Adicionar Novo Território</h2>
-                <button id="close-add-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+                <button id="close-add-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label for="new-territory-name-input" class="block text-sm font-medium text-gray-700">Nome do Novo Território</label>
-                    <input type="text" id="new-territory-name-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Ex: Bairro Novo">
+                    <label for="new-territory-name-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome do Novo Território</label>
+                    <input type="text" id="new-territory-name-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Ex: Bairro Novo">
                 </div>
             </div>
             <div class="mt-6 flex justify-end">
@@ -128,18 +174,49 @@
     </div>
 
 
+    <!-- Modal de Gerenciamento de Territórios (Configurações) -->
+    <div id="manage-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col dark:bg-gray-800 dark:text-white" style="height: 90vh; max-height: 800px;">
+            <div class="p-6 border-b flex justify-between items-center dark:border-gray-700">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Gerenciar Territórios
+                </h2>
+                <button id="close-manage-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto modal-body-scrollable flex-grow">
+                <p class="text-gray-600 dark:text-gray-300 mb-6">Aqui você pode alterar a ordem, renomear, excluir ou adicionar novos territórios.</p>
+                
+                <!-- Lista de Gerenciamento -->
+                <div id="manage-list" class="space-y-3">
+                    <!-- Itens inseridos via JS -->
+                </div>
+            </div>
+            
+            <div class="p-6 border-t bg-gray-50 rounded-b-2xl flex justify-between items-center dark:bg-gray-750 dark:border-gray-700">
+                <span class="text-sm text-gray-500 dark:text-gray-400">*Alterar a ordem troca o conteúdo dos territórios.</span>
+                <button id="manage-add-btn" class="bg-green-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                    Adicionar Novo
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Modal de Reset de Territórios -->
     <div id="reset-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 dark:bg-gray-800 dark:text-white">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-red-600">Zerar Progresso</h2>
-                <button id="close-reset-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+                <h2 class="text-xl font-bold text-red-600 dark:text-red-400">Zerar Progresso</h2>
+                <button id="close-reset-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
             </div>
-            <p class="text-gray-600 mb-4">Esta ação irá limpar o status apenas das casas marcadas como <strong>'Feita'</strong> nos territórios selecionados. Outras marcações (Não Bater, Comércio, etc.) serão mantidas. <strong>Esta ação não pode ser desfeita.</strong></p>
+            <p class="text-gray-600 mb-4 dark:text-gray-300">Esta ação irá limpar o status apenas das casas marcadas como <strong>'Feita'</strong> nos territórios selecionados. Outras marcações (Não Bater, Comércio, etc.) serão mantidas. <strong>Esta ação não pode ser desfeita.</strong></p>
             <div class="space-y-4">
                 <div>
-                    <label for="reset-territory-selection-input" class="block text-sm font-medium text-gray-700">Territórios a zerar (ex: 1, 3-5, 8)</label>
-                    <input type="text" id="reset-territory-selection-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Todos">
+                    <label for="reset-territory-selection-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Territórios a zerar (ex: 1, 3-5, 8)</label>
+                    <input type="text" id="reset-territory-selection-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Todos">
                 </div>
             </div>
             <div class="mt-6 flex justify-end">
@@ -153,10 +230,10 @@
 
     <!-- Modal de Informações Detalhadas e Gerenciamento de Status -->
     <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col" style="max-height: 90vh;">
-            <div class="p-6 border-b flex justify-between items-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col dark:bg-gray-800 dark:text-white" style="max-height: 90vh;">
+            <div class="p-6 border-b flex justify-between items-center dark:border-gray-700">
                 <h2 id="info-modal-title" class="text-2xl font-bold">Detalhes do Território</h2>
-                <button id="close-info-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+                <button id="close-info-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
             </div>
             <div id="info-modal-body" class="p-6 overflow-y-auto modal-body-scrollable flex-grow space-y-4">
                 <!-- Conteúdo do progresso e gerenciamento de status será inserido aqui -->
@@ -167,19 +244,19 @@
 
     <!-- Modal de Edição de Território -->
     <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col" style="height: 90vh; max-height: 800px;">
-            <div class="p-6 border-b flex justify-between items-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col dark:bg-gray-800 dark:text-white" style="height: 90vh; max-height: 800px;">
+            <div class="p-6 border-b flex justify-between items-center dark:border-gray-700">
                 <h2 id="edit-modal-title" class="text-2xl font-bold">Editar Território</h2>
-                <button id="close-edit-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+                <button id="close-edit-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto modal-body-scrollable flex-grow">
                 <form id="edit-territory-form" class="space-y-6">
                     <div>
-                        <label for="territory-name-input" class="block text-sm font-medium text-gray-700 mb-1">Nome do Território</label>
-                        <input type="text" id="territory-name-input" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <label for="territory-name-input" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Nome do Território</label>
+                        <input type="text" id="territory-name-input" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400">
                     </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3">Quadras</h3>
+                        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2 mb-3 dark:text-white dark:border-gray-600">Quadras</h3>
                         <div id="blocks-list" class="space-y-4">
                             <!-- As quadras serão inseridas aqui dinamicamente -->
                         </div>
@@ -190,8 +267,8 @@
                     </div>
                 </form>
             </div>
-            <div class="p-6 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-4">
-                <button id="cancel-edit-btn" type="button" class="bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+            <div class="p-6 border-t bg-gray-50 rounded-b-2xl flex justify-end gap-4 dark:bg-gray-750 dark:border-gray-700">
+                <button id="cancel-edit-btn" type="button" class="bg-gray-200 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500">Cancelar</button>
                 <button id="save-edit-btn" type="button" class="bg-blue-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-600 transition-colors">Salvar Alterações</button>
             </div>
         </div>
@@ -199,26 +276,26 @@
     
     <!-- Modal de Geração de Planilha CSV -->
     <div id="csv-report-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 dark:bg-gray-800 dark:text-white">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">Gerar Planilha de Casas (CSV)</h2>
-                <button id="close-csv-report-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+                <button id="close-csv-report-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl dark:text-gray-400 dark:hover:text-gray-200">&times;</button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label for="csv-territory-selection-input" class="block text-sm font-medium text-gray-700">Territórios (ex: 1, 3-5, 8)</label>
-                    <input type="text" id="csv-territory-selection-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="Todos">
+                    <label for="csv-territory-selection-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Territórios (ex: 1, 3-5, 8)</label>
+                    <input type="text" id="csv-territory-selection-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Todos">
                 </div>
                 <div>
-                    <p class="block text-sm font-medium text-gray-700">Incluir no relatório:</p>
+                    <p class="block text-sm font-medium text-gray-700 dark:text-gray-300">Incluir no relatório:</p>
                     <div class="mt-2 space-y-2">
                         <label class="flex items-center">
-                            <input type="checkbox" id="csv-include-visited-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded" checked>
-                            <span class="ml-2 text-gray-700">Casas Visitadas (Feitas ou Não Bater)</span>
+                            <input type="checkbox" id="csv-include-visited-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600" checked>
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">Casas Visitadas (Feitas ou Não Bater)</span>
                         </label>
                         <label class="flex items-center">
-                            <input type="checkbox" id="csv-include-not-visited-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded" checked>
-                            <span class="ml-2 text-gray-700">Casas Não Visitadas</span>
+                            <input type="checkbox" id="csv-include-not-visited-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600" checked>
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">Casas Não Visitadas</span>
                         </label>
                     </div>
                 </div>
@@ -236,7 +313,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch, getDoc, deleteField, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, setDoc, writeBatch, getDoc, deleteField, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
@@ -251,6 +328,70 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // --- Dark Mode Logic ---
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const themeIconSun = document.getElementById('theme-icon-sun');
+        const themeIconMoon = document.getElementById('theme-icon-moon');
+
+        function updateThemeIcon(isDark) {
+            if (isDark) {
+                themeIconMoon.classList.add('hidden');
+                themeIconSun.classList.remove('hidden');
+            } else {
+                themeIconSun.classList.add('hidden');
+                themeIconMoon.classList.remove('hidden');
+            }
+        }
+
+        // Check local storage or system preference on load
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            updateThemeIcon(true);
+        } else {
+            document.documentElement.classList.remove('dark');
+            updateThemeIcon(false);
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                updateThemeIcon(false);
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                updateThemeIcon(true);
+            }
+        });
+
+        // --- Scroll Lock Logic ---
+        function lockScroll() {
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function unlockScroll() {
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // --- Safe Modal Close Logic ---
+        function setupSafeModalClose(modal, closeFunction) {
+            let mouseDownTarget = null;
+
+            modal.addEventListener('mousedown', (e) => {
+                mouseDownTarget = e.target;
+            });
+
+            modal.addEventListener('click', (e) => {
+                // Only close if both mousedown and click (mouseup) happened on the modal overlay itself
+                if (e.target === modal && mouseDownTarget === modal) {
+                    closeFunction();
+                }
+                // Reset target
+                mouseDownTarget = null;
+            });
+        }
+
 
         document.addEventListener('DOMContentLoaded', async () => {
             const errorBanner = document.getElementById('error-banner');
@@ -268,6 +409,7 @@
             const homeBtn = document.getElementById('home-btn');
             const reportsPageBtn = document.getElementById('reports-page-btn');
             const grid = document.getElementById('territory-cards-grid');
+            const manageTerritoriesBtn = document.getElementById('manage-territories-btn');
             
             // --- Edit Modal Elements ---
             const editModal = document.getElementById('edit-modal');
@@ -285,6 +427,12 @@
             const infoModalBody = document.getElementById('info-modal-body');
             const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
             
+            // --- Manage Modal Elements ---
+            const manageModal = document.getElementById('manage-modal');
+            const closeManageModalBtn = document.getElementById('close-manage-modal-btn');
+            const manageList = document.getElementById('manage-list');
+            const manageAddBtn = document.getElementById('manage-add-btn');
+
             // --- Reports Page Elements ---
             const generateCsvBtn = document.getElementById('generate-csv-btn');
             const generateVisualReportBtn = document.getElementById('generate-visual-report-btn');
@@ -381,27 +529,27 @@
                     const progress = workableHouses > 0 ? Math.round((doneHouses / workableHouses) * 100) : 0;
 
                     const card = document.createElement('div');
-                    card.className = 'bg-white p-5 rounded-2xl shadow-md flex flex-col gap-4 transition-transform hover:scale-105';
+                    card.className = 'bg-white p-5 rounded-2xl shadow-md flex flex-col gap-4 transition-transform hover:scale-105 dark:bg-gray-800';
                     card.innerHTML = `
                         <div class="flex justify-between items-start">
-                            <h3 class="text-lg font-bold text-gray-800 flex-1">${String(i).padStart(2, '0')} - ${name}</h3>
+                            <h3 class="text-lg font-bold text-gray-800 flex-1 dark:text-white">${String(i).padStart(2, '0')} - ${name}</h3>
                             <button data-territory-id="${i}" class="info-btn text-gray-400 hover:text-blue-500 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </button>
                         </div>
                         <div class="flex-grow py-2 space-y-1">
                             <div class="flex items-center gap-3 text-sm">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                                     <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: ${progress}%"></div>
                                 </div>
-                                <span class="font-semibold text-gray-700">${progress}%</span>
+                                <span class="font-semibold text-gray-700 dark:text-gray-300">${progress}%</span>
                             </div>
-                            <div class="text-xs text-gray-500 text-center">
+                            <div class="text-xs text-gray-500 text-center dark:text-gray-400">
                                 ${doneHouses} de ${workableHouses} casas concluídas
                             </div>
                         </div>
                         <div class="flex gap-2 mt-auto">
-                            <button data-territory-id="${i}" class="edit-territory-btn flex-1 bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">Editar</button>
+                            <button data-territory-id="${i}" class="edit-territory-btn flex-1 bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">Editar</button>
                             <a href="territorio_${i}.html" class="flex-1 bg-blue-500 text-white text-center font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Ir para Território</a>
                         </div>
                     `;
@@ -416,7 +564,133 @@
                     localTerritoryData[doc.id] = doc.data();
                 });
                 renderTerritoryCards();
+                // If manage modal is open, refresh it
+                if (!manageModal.classList.contains('hidden')) {
+                    renderManageList();
+                }
             });
+
+            // --- Manage Modal Logic ---
+            function renderManageList() {
+                manageList.innerHTML = '';
+                const sortedIds = Object.keys(localTerritoryData).map(Number).sort((a, b) => a - b);
+                
+                if (sortedIds.length === 0) {
+                    manageList.innerHTML = '<p class="text-center text-gray-500">Nenhum território encontrado.</p>';
+                    return;
+                }
+
+                sortedIds.forEach((id, index) => {
+                    const data = localTerritoryData[id];
+                    const div = document.createElement('div');
+                    div.className = 'flex flex-col sm:flex-row items-center gap-4 p-4 bg-gray-100 rounded-lg dark:bg-gray-750 border dark:border-gray-700';
+                    
+                    const isFirst = index === 0;
+                    const isLast = index === sortedIds.length - 1;
+
+                    div.innerHTML = `
+                        <div class="flex items-center gap-2 font-bold text-lg w-16 justify-center bg-white dark:bg-gray-600 p-2 rounded text-gray-700 dark:text-white border dark:border-gray-500">
+                            #${String(id).padStart(2, '0')}
+                        </div>
+                        <div class="flex-grow w-full">
+                            <input type="text" value="${data.name}" class="manage-name-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-600 dark:border-gray-500 dark:text-white" placeholder="Nome do Território" data-id="${id}">
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <button type="button" class="move-up-btn p-2 text-gray-500 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed" title="Mover para Cima" ${isFirst ? 'disabled' : ''} data-id="${id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+                            </button>
+                            <button type="button" class="move-down-btn p-2 text-gray-500 hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed" title="Mover para Baixo" ${isLast ? 'disabled' : ''} data-id="${id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </button>
+                            <div class="h-6 w-px bg-gray-300 mx-1"></div>
+                            <button type="button" class="delete-territory-btn p-2 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full transition-colors" title="Excluir Território" data-id="${id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                            </button>
+                        </div>
+                    `;
+                    manageList.appendChild(div);
+                });
+
+                // Re-attach input listener separately as it is not a click event
+                manageList.querySelectorAll('.manage-name-input').forEach(input => {
+                    input.addEventListener('change', async (e) => {
+                        const id = e.target.dataset.id;
+                        const newName = e.target.value.trim();
+                        if(newName) {
+                            await updateDoc(doc(db, "territories", String(id)), { name: newName });
+                        }
+                    });
+                });
+            }
+
+            // Centralized Event Delegation for Manage List (Buttons)
+            // This ensures buttons work even after re-rendering without re-attaching listeners
+            manageList.addEventListener('click', async (e) => {
+                const target = e.target;
+                
+                // Handle Delete
+                const deleteBtn = target.closest('.delete-territory-btn');
+                if (deleteBtn) {
+                    const id = deleteBtn.dataset.id;
+                    if(confirm(`Tem certeza que deseja EXCLUIR o Território ${id}? Esta ação não pode ser desfeita.`)) {
+                         await deleteDoc(doc(db, "territories", String(id)));
+                    }
+                    return;
+                }
+
+                // Handle Move Up
+                const moveUpBtn = target.closest('.move-up-btn');
+                if (moveUpBtn && !moveUpBtn.disabled) {
+                    const currentId = parseInt(moveUpBtn.dataset.id);
+                    const sortedIds = Object.keys(localTerritoryData).map(Number).sort((a, b) => a - b);
+                    const currentIndex = sortedIds.indexOf(currentId);
+                    if(currentIndex > 0) {
+                        swapTerritories(currentId, sortedIds[currentIndex - 1]);
+                    }
+                    return;
+                }
+
+                // Handle Move Down
+                const moveDownBtn = target.closest('.move-down-btn');
+                if (moveDownBtn && !moveDownBtn.disabled) {
+                    const currentId = parseInt(moveDownBtn.dataset.id);
+                    const sortedIds = Object.keys(localTerritoryData).map(Number).sort((a, b) => a - b);
+                    const currentIndex = sortedIds.indexOf(currentId);
+                    if(currentIndex < sortedIds.length - 1) {
+                        swapTerritories(currentId, sortedIds[currentIndex + 1]);
+                    }
+                    return;
+                }
+            });
+
+
+            async function swapTerritories(id1, id2) {
+                // Swaps the data between two documents to effectively reorder them in the ID-based list
+                // This preserves the "Territory ID" as the sort order.
+                const doc1Ref = doc(db, "territories", String(id1));
+                const doc2Ref = doc(db, "territories", String(id2));
+                
+                try {
+                    const doc1Snap = await getDoc(doc1Ref);
+                    const doc2Snap = await getDoc(doc2Ref);
+
+                    if(doc1Snap.exists() && doc2Snap.exists()) {
+                        const data1 = doc1Snap.data();
+                        const data2 = doc2Snap.data();
+
+                        const batch = writeBatch(db);
+                        batch.set(doc1Ref, data2);
+                        batch.set(doc2Ref, data1);
+                        await batch.commit();
+                    }
+                } catch (e) {
+                    console.error("Error swapping territories:", e);
+                    alert("Erro ao alterar a ordem.");
+                }
+            }
+
+
+            // --- General Logic ---
             
             function openInfoModal(territoryId) {
                 const data = localTerritoryData[territoryId];
@@ -427,14 +701,15 @@
                 infoModal.dataset.territoryId = territoryId;
 
                 if (!data.blocks || data.blocks.length === 0) {
-                    infoModalBody.innerHTML = '<p class="text-gray-500">Nenhuma quadra foi configurada.</p>';
+                    infoModalBody.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Nenhuma quadra foi configurada.</p>';
                     infoModal.classList.remove('hidden');
+                    lockScroll(); // Lock scroll
                     return;
                 }
 
                 data.blocks.forEach(block => {
                     const blockDiv = document.createElement('div');
-                    blockDiv.className = 'p-4 border rounded-lg';
+                    blockDiv.className = 'p-4 border rounded-lg dark:border-gray-700';
                     let streetsHtml = '';
                     if (block.streets && block.streets.length > 0) {
                         streetsHtml = block.streets.map(street => {
@@ -444,21 +719,21 @@
                                 
                                 let statusBadge = '';
                                 if (currentStatus === 'DONE') {
-                                    statusBadge = '<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">Feita</span>';
+                                    statusBadge = '<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200 dark:bg-blue-900 dark:text-blue-200">Feita</span>';
                                 } else if (currentStatus === 'DND') {
-                                    statusBadge = '<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">Não Bater</span>';
+                                    statusBadge = '<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200 dark:bg-red-900 dark:text-red-200">Não Bater</span>';
                                 }
 
                                 const isDND = currentStatus === 'DND';
 
                                 return `
-                                    <div class="flex items-center justify-between py-2 border-b">
-                                        <span class="text-gray-700 font-medium">${house}</span>
+                                    <div class="flex items-center justify-between py-2 border-b dark:border-gray-700">
+                                        <span class="text-gray-700 font-medium dark:text-gray-200">${house}</span>
                                         <div class="flex items-center gap-3">
                                             ${statusBadge}
                                             <label class="relative inline-flex items-center cursor-pointer" title="Marcar como 'Não Bater'">
                                                 <input type="checkbox" ${isDND ? 'checked' : ''} data-action="toggleDND" data-block-name="${block.name}" data-street-name="${street.name}" data-house-number="${house}" class="sr-only peer">
-                                                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                                                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 dark:bg-gray-600 dark:border-gray-500"></div>
                                             </label>
                                         </div>
                                     </div>
@@ -466,8 +741,8 @@
                             }).join('');
 
                             return `
-                                <div class="mt-2 pl-4 border-l-2">
-                                    <h5 class="font-semibold">${street.name}</h5>
+                                <div class="mt-2 pl-4 border-l-2 dark:border-gray-700">
+                                    <h5 class="font-semibold dark:text-gray-200">${street.name}</h5>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">${housesHtml}</div>
                                 </div>
                             `;
@@ -476,10 +751,11 @@
                          streetsHtml = '<p class="text-sm text-gray-400 mt-2">Nenhuma rua configurada.</p>';
                     }
                     
-                    blockDiv.innerHTML = `<h4 class="font-bold text-lg">Quadra ${block.name}</h4>${streetsHtml}`;
+                    blockDiv.innerHTML = `<h4 class="font-bold text-lg dark:text-white">Quadra ${block.name}</h4>${streetsHtml}`;
                     infoModalBody.appendChild(blockDiv);
                 });
                 infoModal.classList.remove('hidden');
+                lockScroll(); // Lock scroll
             }
 
             async function handleToggleDND(toggle) {
@@ -509,19 +785,19 @@
 
             function createStreetInputRow(street = { name: '', houses: '', mapLink: '' }) {
                 const div = document.createElement('div');
-                div.className = 'p-3 bg-gray-100 rounded-lg border ml-4';
+                div.className = 'p-3 bg-gray-100 rounded-lg border ml-4 dark:bg-gray-700 dark:border-gray-600';
                 div.innerHTML = `
                     <div class="flex items-center gap-3 mb-2">
-                        <input type="text" value="${street.name}" class="street-name-input w-full flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Nome da Rua">
+                        <input type="text" value="${street.name}" class="street-name-input w-full flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-600 dark:border-gray-500 dark:text-white" placeholder="Nome da Rua">
                         <button type="button" class="delete-street-btn bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors flex-shrink-0">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
                         </button>
                     </div>
                     <div>
-                        <textarea class="street-houses-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" rows="3" placeholder="Números das casas (Ex: 10, 25B, 40, 55F, 60C)">${street.houses}</textarea>
+                        <textarea class="street-houses-input w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-600 dark:border-gray-500 dark:text-white" rows="3" placeholder="Números das casas (Ex: 10, 25B, 40, 55F, 60C)">${street.houses}</textarea>
                     </div>
                     <div>
-                        <input type="url" value="${street.mapLink || ''}" class="street-map-link-input mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="Link do Google Maps (opcional)">
+                        <input type="url" value="${street.mapLink || ''}" class="street-map-link-input mt-2 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-600 dark:border-gray-500 dark:text-white" placeholder="Link do Google Maps (opcional)">
                     </div>
                 `;
                 div.querySelector('.delete-street-btn').addEventListener('click', () => div.remove());
@@ -530,10 +806,10 @@
 
             function createBlockInputRow(block = { name: '', streets: [] }) {
                 const div = document.createElement('div');
-                div.className = 'p-4 bg-gray-50 rounded-lg border';
+                div.className = 'p-4 bg-gray-50 rounded-lg border dark:bg-gray-750 dark:border-gray-600';
                 div.innerHTML = `
                     <div class="flex items-center gap-3 mb-3">
-                        <input type="text" value="${block.name}" class="block-name-input w-full flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-lg font-semibold" placeholder="Nome da Quadra (Ex: A)">
+                        <input type="text" value="${block.name}" class="block-name-input w-full flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-lg font-semibold dark:bg-gray-600 dark:border-gray-500 dark:text-white" placeholder="Nome da Quadra (Ex: A)">
                         <button type="button" class="delete-block-btn bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors flex-shrink-0">
                              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
                         </button>
@@ -564,10 +840,12 @@
                 }
                 saveBtn.dataset.territoryId = territoryId;
                 editModal.classList.remove('hidden');
+                lockScroll(); // Lock Scroll
             }
 
             function closeEditModal() {
                 editModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
             }
             
             function parseTerritorySelection(input) {
@@ -684,19 +962,19 @@
 
                     let html = '<div class="space-y-6">';
                     for (const territoryKey in groupedData) {
-                        html += `<div class="p-4 border rounded-lg"><h2 class="text-xl font-bold mb-3">${territoryKey}</h2><div class="space-y-4">`;
+                        html += `<div class="p-4 border rounded-lg dark:border-gray-700"><h2 class="text-xl font-bold mb-3 dark:text-white">${territoryKey}</h2><div class="space-y-4">`;
                         for (const blockKey in groupedData[territoryKey]) {
-                            html += `<div class="pl-4 border-l-2"><h3 class="text-lg font-semibold">Quadra ${blockKey}</h3><div class="space-y-2 mt-2">`;
+                            html += `<div class="pl-4 border-l-2 dark:border-gray-700"><h3 class="text-lg font-semibold dark:text-gray-200">Quadra ${blockKey}</h3><div class="space-y-2 mt-2">`;
                             for (const streetKey in groupedData[territoryKey][blockKey]) {
-                                html += `<div class="pl-4"><h4 class="font-medium">${streetKey}</h4><ul class="list-disc list-inside text-gray-600 mt-1">`;
+                                html += `<div class="pl-4"><h4 class="font-medium dark:text-gray-300">${streetKey}</h4><ul class="list-disc list-inside text-gray-600 mt-1 dark:text-gray-400">`;
                                 groupedData[territoryKey][blockKey][streetKey].forEach(({houseNumber, status}) => {
                                     let statusBadge = '';
                                     if (status === 'DONE') {
-                                        statusBadge = '<span class="ml-2 text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">Feita</span>';
+                                        statusBadge = '<span class="ml-2 text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200 dark:bg-blue-900 dark:text-blue-200">Feita</span>';
                                     } else if (status === 'DND') {
-                                        statusBadge = '<span class="ml-2 text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">Não Bater</span>';
+                                        statusBadge = '<span class="ml-2 text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200 dark:bg-red-900 dark:text-red-200">Não Bater</span>';
                                     } else {
-                                        statusBadge = '<span class="ml-2 text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200">Não Visitada</span>';
+                                        statusBadge = '<span class="ml-2 text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-gray-600 bg-gray-200 dark:bg-gray-700 dark:text-gray-300">Não Visitada</span>';
                                     }
                                     html += `<li>${houseNumber} ${statusBadge}</li>`;
                                 });
@@ -780,6 +1058,7 @@
                     btn.disabled = false;
                     btnText.textContent = 'Gerar Planilha';
                     csvReportModal.classList.add('hidden');
+                    unlockScroll(); // Unlock Scroll
                 }
             }
 
@@ -837,6 +1116,7 @@
                     btn.disabled = false;
                     btnText.textContent = 'Zerar Progresso';
                     resetModal.classList.add('hidden');
+                    unlockScroll(); // Unlock Scroll
                 }
             }
             
@@ -847,6 +1127,7 @@
                     return;
                 }
 
+                // If called from the main Add modal
                 saveNewTerritoryBtn.disabled = true;
                 saveNewTerritoryBtn.textContent = 'Salvando...';
 
@@ -863,6 +1144,11 @@
                     await setDoc(docRef, newTerritoryData);
 
                     addTerritoryModal.classList.add('hidden');
+                    unlockScroll(); // Unlock Scroll
+                    // Refresh manage list if open
+                    if(!manageModal.classList.contains('hidden')) {
+                         renderManageList();
+                    }
                 } catch (error) {
                     console.error("Erro ao adicionar novo território:", error);
                     alert("Não foi possível adicionar o território. Tente novamente.");
@@ -895,29 +1181,76 @@
             
             generateCsvBtn.addEventListener('click', () => {
                 csvReportModal.classList.remove('hidden');
+                lockScroll(); // Lock Scroll
             });
-            closeCsvReportModalBtn.addEventListener('click', () => csvReportModal.classList.add('hidden'));
-            csvReportModal.addEventListener('click', e => {
-                if(e.target === csvReportModal) csvReportModal.classList.add('hidden');
+            closeCsvReportModalBtn.addEventListener('click', () => {
+                csvReportModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
             });
+            
+            // Replaced simple click check with Safe Close
+            setupSafeModalClose(csvReportModal, () => {
+                csvReportModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
+            });
+
             confirmGenerateCsvBtn.addEventListener('click', generateCSVFromModal);
             
-            resetIconBtn.addEventListener('click', () => resetModal.classList.remove('hidden'));
-            closeResetModalBtn.addEventListener('click', () => resetModal.classList.add('hidden'));
-            resetModal.addEventListener('click', (e) => {
-                if (e.target === resetModal) resetModal.classList.add('hidden');
+            resetIconBtn.addEventListener('click', () => {
+                resetModal.classList.remove('hidden');
+                lockScroll(); // Lock Scroll
             });
+            closeResetModalBtn.addEventListener('click', () => {
+                resetModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
+            });
+            
+            // Replaced simple click check with Safe Close
+            setupSafeModalClose(resetModal, () => {
+                resetModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
+            });
+            
             confirmResetBtn.addEventListener('click', resetTerritories);
 
             addTerritoryBtn.addEventListener('click', () => {
                 newTerritoryNameInput.value = '';
                 addTerritoryModal.classList.remove('hidden');
+                lockScroll(); // Lock Scroll
             });
-            closeAddModalBtn.addEventListener('click', () => addTerritoryModal.classList.add('hidden'));
-            addTerritoryModal.addEventListener('click', (e) => {
-                if (e.target === addTerritoryModal) addTerritoryModal.classList.add('hidden');
+            closeAddModalBtn.addEventListener('click', () => {
+                addTerritoryModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
             });
+            
+            // Replaced simple click check with Safe Close
+            setupSafeModalClose(addTerritoryModal, () => {
+                addTerritoryModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
+            });
+
             saveNewTerritoryBtn.addEventListener('click', addNewTerritory);
+            
+            // Manage Modal Listeners
+            manageTerritoriesBtn.addEventListener('click', () => {
+                renderManageList();
+                manageModal.classList.remove('hidden');
+                lockScroll(); // Lock Scroll
+            });
+            closeManageModalBtn.addEventListener('click', () => {
+                manageModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
+            });
+            setupSafeModalClose(manageModal, () => {
+                manageModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
+            });
+            
+            manageAddBtn.addEventListener('click', () => {
+                newTerritoryNameInput.value = '';
+                addTerritoryModal.classList.remove('hidden');
+                lockScroll(); // Lock Scroll
+            });
 
 
             addBlockBtn.addEventListener('click', () => {
@@ -927,16 +1260,22 @@
             saveBtn.addEventListener('click', async () => {
                 const territoryId = saveBtn.dataset.territoryId;
                 const newBlocks = [];
-                const blockRows = blocksList.querySelectorAll('.p-4.bg-gray-50');
+                const blockRows = blocksList.querySelectorAll('.rounded-lg.border.dark\\:border-gray-700, .rounded-lg.border.bg-gray-50');
                 
                 blockRows.forEach(blockRow => {
                     const blockNameInput = blockRow.querySelector('.block-name-input');
                     if (!blockNameInput.value.trim()) return;
 
                     const newStreets = [];
-                    const streetRows = blockRow.querySelectorAll('.p-3.bg-gray-100');
-                    streetRows.forEach(streetRow => {
-                        const streetNameInput = streetRow.querySelector('.street-name-input');
+                    // Update selector to handle dark mode classes
+                    const streetRows = blockRow.querySelectorAll('.street-name-input').length > 0 ? 
+                        blockRow.querySelectorAll('.p-3.rounded-lg.border') : []; // Safer selection based on container structure
+                        
+                    // Actually, let's select based on input presence to be safe across classes
+                    const streetContainers = blockRow.querySelectorAll('div > .street-name-input');
+                    streetContainers.forEach(input => {
+                        const streetRow = input.closest('.p-3');
+                         const streetNameInput = streetRow.querySelector('.street-name-input');
                         const streetHousesInput = streetRow.querySelector('.street-houses-input');
                         const streetMapLinkInput = streetRow.querySelector('.street-map-link-input');
                         if (streetNameInput.value.trim()) {
@@ -971,13 +1310,19 @@
 
             closeModalBtn.addEventListener('click', closeEditModal);
             cancelBtn.addEventListener('click', closeEditModal);
-            editModal.addEventListener('click', (e) => {
-                if (e.target === editModal) closeEditModal();
-            });
+            
+            // Replaced simple click check with Safe Close
+            setupSafeModalClose(editModal, closeEditModal);
 
-            closeInfoModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
-            infoModal.addEventListener('click', (e) => {
-                if(e.target === infoModal) infoModal.classList.add('hidden');
+            closeInfoModalBtn.addEventListener('click', () => {
+                infoModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
+            });
+            
+            // Replaced simple click check with Safe Close
+            setupSafeModalClose(infoModal, () => {
+                infoModal.classList.add('hidden');
+                unlockScroll(); // Unlock Scroll
             });
 
         });
