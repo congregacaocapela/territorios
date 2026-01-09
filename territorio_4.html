@@ -2,15 +2,20 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão do Território</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestão do Território + GPS</title>
     <link rel="icon" href="favicon.png" onerror="this.href='favicon.jpg'">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- LEAFLET (MAPAS) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <style>
-        /* Fundo da página - bg-gray-300 */
+        /* Fundo da página */
         body { font-family: 'Inter', sans-serif; background-color: #D1D5DB; }
-        #app-container { padding-bottom: 120px; /* Space for the legend */ }
+        #app-container { padding-bottom: 120px; }
         .house-box {
             transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -31,33 +36,63 @@
         .legend {
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         }
-
-        /* === Animação de Pulse Adicionada === */
         @keyframes pulse-discreet {
-            0%, 100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(1.08); /* Um pouco maior para ser visível */
-                opacity: 0.8; /* Um pouco transparente */
-            }
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
         }
-        .animate-pulse-discreet {
-            /* Duração de 2.5s para ser mais lenta e discreta */
-            animation: pulse-discreet 2.5s infinite;
-        }
-        /* ===================================== */
+        .animate-pulse-discreet { animation: pulse-discreet 3s infinite ease-in-out; }
 
+        /* Estilo do Mapa */
+        #map-container-view, #map-container-global {
+            height: 350px;
+            width: 100%;
+            z-index: 1;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            display: none;
+            position: relative;
+        }
+        
+        .leaflet-control-attribution { font-size: 8px; }
+        
+        /* Ícone de Texto para as Letras das Quadras */
+        .text-label-icon {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            font-size: 20px;
+            font-weight: 800;
+            color: #1e3a8a; /* Azul escuro */
+            text-shadow: 2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* Botão Discreto de Admin */
+        .admin-lock-btn {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 4px;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #9CA3AF; /* Gray 400 */
+            transition: all 0.3s;
+        }
+        .admin-lock-btn:hover {
+            background: rgba(255, 255, 255, 1);
+            color: #4B5563; /* Gray 600 */
+        }
     </style>
 </head>
 <body class="text-gray-800">
 
     <!-- Notification Container -->
-    <div id="notification-container" class="fixed top-4 right-4 z-[100] space-y-2"></div>
+    <div id="notification-container" class="fixed top-4 right-4 z-[1000] space-y-2"></div>
 
     <!-- Container da Aplicação -->
-    <!-- O padding p-4 foi movido para dentro das funções renderListView, etc. -->
     <div id="app-container" class="container mx-auto max-w-lg"></div>
     
     <!-- Legenda Fixa -->
@@ -74,7 +109,7 @@
         </div>
     </div>
 
-    <!-- Modal de Imagem do Mapa -->
+    <!-- Modal de Imagem do Mapa (Estático) -->
     <div id="map-image-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-4">
         <div class="relative bg-white p-2 rounded-lg shadow-xl">
             <button id="close-map-modal-btn" class="absolute -top-4 -right-4 text-white bg-gray-800 rounded-full h-10 w-10 flex items-center justify-center text-2xl z-10">&times;</button>
@@ -108,11 +143,13 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Importando enableIndexedDbPersistence para cache offline
+        import { getFirestore, doc, onSnapshot, setDoc, updateDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const TERRITORY_ID = "4";
+        const ADMIN_PASSWORD = "jw1914";
 
-        // *** IMPORTANTE: Substitua pela sua configuração real do Firebase ***
+        // *** Configuração Firebase ***
         const firebaseConfig = {
             apiKey: "AIzaSyCFHsGwsoiVRhV0LblPKvY6gsws3bfbwXY",
             authDomain: "quadrascasas.firebaseapp.com",
@@ -122,18 +159,44 @@
             appId: "1:1088979227180:web:fbf72a87b811236efeb789",
             measurementId: "G-YEQ216076G"
         };
-        // *******************************************************************
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // Ativando persistência offline para economizar dados
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code == 'failed-precondition') {
+                console.log('Persistência falhou: Múltiplas abas abertas.');
+            } else if (err.code == 'unimplemented') {
+                console.log('Navegador não suporta persistência offline.');
+            }
+        });
+
+        // Variáveis globais para os mapas
+        let mapInstance = null;
+        let globalMapInstance = null;
+        let userMarker = null;
+        let globalUserMarker = null;
+        let streetPolyline = null;
+        let tempMarkers = []; 
+        let drawingLayerGroup = null; 
+        
+        // Variáveis para Mapa Geral
+        let globalDrawingLayer = null;
+        let currentPolygonPoints = [];
+        let currentPolygons = [];
+        let currentLabels = [];
+        let isDrawingGlobalPolygon = false;
+
+        let watchId = null; 
+        let globalWatchId = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await signInAnonymously(auth);
             } catch(error) {
                 document.getElementById('app-container').innerHTML = `<div class="p-4"><p class="text-red-500 text-center p-4 bg-white rounded-lg">Erro de autenticação.</p></div>`;
-                console.error("Authentication failed:", error);
                 return;
             }
 
@@ -149,7 +212,6 @@
             const closeMapModalBtn = document.getElementById('close-map-modal-btn');
             
             const notificationContainer = document.getElementById('notification-container');
-            
             const infoModal = document.getElementById('info-modal');
             const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
 
@@ -159,7 +221,7 @@
             onSnapshot(territoryDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     currentTerritoryData = docSnap.data();
-                    handleRouteChange();
+                    handleRouteChange(); 
                 } else {
                     appContainer.innerHTML = `<div class="p-4"><p class="text-center p-4 bg-white rounded-lg">Território ${TERRITORY_ID} não encontrado.</p></div>`;
                 }
@@ -182,7 +244,30 @@
                 }, 3000);
             }
 
+            function checkPassword() {
+                const pass = prompt("Senha:");
+                return pass === ADMIN_PASSWORD;
+            }
+
             function handleRouteChange() {
+                // Proteção contra erro de limpeza de mapa
+                try {
+                    if (mapInstance) {
+                        mapInstance.remove();
+                        mapInstance = null;
+                    }
+                } catch (e) { console.warn("Erro ao limpar mapa rua:", e); mapInstance = null; }
+
+                try {
+                    if (globalMapInstance) {
+                        globalMapInstance.remove();
+                        globalMapInstance = null;
+                    }
+                } catch (e) { console.warn("Erro ao limpar mapa global:", e); globalMapInstance = null; }
+
+                if (watchId) navigator.geolocation.clearWatch(watchId);
+                if (globalWatchId) navigator.geolocation.clearWatch(globalWatchId);
+
                 const hash = window.location.hash.substring(1);
                 const [blockName, streetName] = hash.split('&').map(decodeURIComponent);
 
@@ -199,9 +284,15 @@
                 }
             }
 
+            // --- RENDERIZAÇÃO ---
+
             function renderListView(data) {
                 const territoryName = data.name || `Território ${TERRITORY_ID}`;
                 document.title = `Gestão: ${territoryName}`;
+                
+                // Dados do mapa geral
+                const globalData = data.mapData?.global || null;
+
                 let blocksHtml = data.blocks?.map(block => `
                      <a href="#${encodeURIComponent(block.name)}" class="block-link flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                         <div class="flex-1"><h3 class="font-bold text-xl">Quadra ${block.name}</h3></div>
@@ -210,32 +301,93 @@
                 
                 appContainer.innerHTML = `
                     <div class="p-4">
-                         <!-- Cabeçalho com nova cor, layout de cartão e botão de voltar -->
-                         <div class="bg-gray-800 text-gray-100 p-6 rounded-2xl mb-6 flex justify-between items-start shadow-sm relative">
+                         <div class="bg-gray-800 text-gray-100 p-6 rounded-2xl mb-6 flex items-start gap-4 shadow-sm relative">
                             <!-- Botão Voltar -->
-                            <a href="portaldeterritorios.html" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white" title="Voltar ao Portal">
+                            <a href="portaldeterritorios.html" class="flex-shrink-0 mt-1 text-gray-100 hover:text-white" title="Voltar ao Portal">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
                             </a>
-                            <div class="pl-10"> <!-- Padding para o botão de voltar -->
-                                <h1 class="text-2xl font-bold">Olá Publicador(a),</h1>
-                                <p class="text-gray-300">Preencha as casas da quadra onde você falou!</p>
-                                <p class="font-bold mt-3 text-lg">${TERRITORY_ID} - ${territoryName}</p>
+                            <!-- Texto -->
+                            <div class="flex-grow">
+                                <h1 class="text-2xl font-bold leading-tight">Olá Publicador(a),</h1>
+                                <p class="text-gray-300 text-sm mt-1">Preencha as casas da quadra onde você falou!</p>
+                                <p class="font-bold mt-2 text-lg break-words">${TERRITORY_ID} - ${territoryName}</p>
                             </div>
-                            
-                            <!-- Ícone de Mapa (PULSANDO) -->
-                            <svg id="territory-map-icon" xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-300 cursor-pointer flex-shrink-0 animate-pulse-discreet" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13v-6m0 6l6-3m-6 3V7m0 0l6-3m0 0l5.447 2.724A1 1 0 0121 7.618v10.764a1 1 0 01-1.447.894L15 17m0 0v-6m0 6l-6-3" />
-                            </svg>
-
                         </div>
+
+                        <!-- Botão Mapa Geral -->
+                        <div class="mb-6">
+                            <button id="toggle-global-map-btn" class="w-full bg-blue-100 text-blue-800 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-blue-200 transition-colors shadow-sm animate-pulse-discreet">
+                                Mapa do Território
+                            </button>
+                            
+                            <!-- Container Mapa Geral -->
+                            <div id="map-container-global" class="relative mt-2 border-2 border-blue-100">
+                                <!-- Botão Discreto de Admin (Global) -->
+                                <div id="global-lock-btn" class="admin-lock-btn hidden" title="Editar Mapa">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+
+                                <div id="global-map-controls" class="absolute bottom-4 left-4 right-4 z-[500] flex flex-wrap gap-2 hidden justify-center">
+                                    <button id="add-polygon-btn" class="bg-blue-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow hover:bg-blue-700">＋ Desenhar Quadra</button>
+                                    <button id="add-label-btn" class="bg-purple-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow hover:bg-purple-700">＋ Adicionar Letra</button>
+                                    <button id="save-global-btn" class="bg-green-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow hover:bg-green-700 hidden">Salvar Tudo</button>
+                                    <button id="finish-poly-btn" class="bg-yellow-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow hover:bg-yellow-600 hidden">Terminar Desenho</button>
+                                    <button id="reset-global-btn" class="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow hover:bg-red-600 hidden">Apagar Tudo</button>
+                                </div>
+                                
+                                <div id="global-instructions" class="absolute top-2 left-1/2 transform -translate-x-1/2 z-[500] bg-white px-3 py-1 rounded-full shadow text-xs font-bold hidden text-center w-max text-gray-700 border border-gray-200">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="space-y-3">${blocksHtml}</div>
                     </div>`;
+
+                // Event Listeners Mapa Geral
+                const toggleGlobalBtn = document.getElementById('toggle-global-map-btn');
+                toggleGlobalBtn.addEventListener('click', () => {
+                    const mapDiv = document.getElementById('map-container-global');
+                    if (mapDiv.style.display === 'block') {
+                        mapDiv.style.display = 'none';
+                        toggleGlobalBtn.innerText = 'Mapa do Território';
+                        toggleGlobalBtn.classList.add('animate-pulse-discreet');
+                        if(globalWatchId) navigator.geolocation.clearWatch(globalWatchId);
+                    } else {
+                        mapDiv.style.display = 'block';
+                        toggleGlobalBtn.innerText = 'Ocultar Mapa';
+                        toggleGlobalBtn.classList.remove('animate-pulse-discreet');
+                        initGlobalMap(globalData);
+                    }
+                });
+
+                document.getElementById('add-polygon-btn')?.addEventListener('click', startDrawingPolygon);
+                document.getElementById('finish-poly-btn')?.addEventListener('click', finishPolygon);
+                document.getElementById('add-label-btn')?.addEventListener('click', enableLabelMode);
+                document.getElementById('save-global-btn')?.addEventListener('click', saveGlobalMap);
+                document.getElementById('reset-global-btn')?.addEventListener('click', resetGlobalMap);
+                
+                document.getElementById('global-lock-btn')?.addEventListener('click', () => {
+                    if (checkPassword()) {
+                        document.getElementById('global-lock-btn').classList.add('hidden');
+                        document.getElementById('global-map-controls').classList.remove('hidden');
+                        document.getElementById('reset-global-btn').classList.remove('hidden'); // Mostra botão de apagar
+                    } else {
+                        showNotification('Senha incorreta.', 'error');
+                    }
+                });
             }
 
             function renderBlockView(blockName, data) {
                 const territoryName = data.name || `Território ${TERRITORY_ID}`;
-                const block = data.blocks?.find(b => b.name === blockName);
-                if (!block) { window.location.hash = ''; return; }
+                // CORREÇÃO CRÍTICA: Converter ambos para String para evitar erro de tipo (Número vs Texto)
+                const block = data.blocks?.find(b => String(b.name) === blockName);
+                if (!block) { 
+                    console.warn(`Quadra "${blockName}" não encontrada nos dados.`);
+                    window.location.hash = ''; 
+                    return; 
+                }
                 document.title = `Quadra ${blockName} - ${territoryName}`;
 
                 let streetsContentHtml;
@@ -243,12 +395,14 @@
                     streetsContentHtml = `
                         <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg shadow-md my-4" role="alert">
                             <p class="font-bold">Aviso</p>
-                            <p>Ainda não temos as ruas desta quadra cadastradas. Por favor, envie para o meu whatsapp para que eu possa adicionar e atualizar. obrigado. ass: Guilherme</p>
+                            <p>Ainda não temos as ruas desta quadra cadastradas.</p>
                         </div>
                     `;
                 } else {
                     streetsContentHtml = '<div class="space-y-3">' + block.streets.map(street => {
-                        const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
+                        // CORREÇÃO: Proteger contra ruas sem números (street.houses undefined)
+                        const housesStr = street.houses || "";
+                        const houseNumbers = housesStr.split(',').map(h => h.trim()).filter(Boolean);
                         const range = houseNumbers.length > 1 ? `${houseNumbers[0]} à ${houseNumbers[houseNumbers.length - 1]}` : (houseNumbers.length === 1 ? `Nº ${houseNumbers[0]}` : 'Nenhum número');
                         const mapLinkIcon = street.mapLink 
                             ? `<a href="${street.mapLink}" target="_blank" rel="noopener noreferrer" class="bg-gray-200 p-3 rounded-lg hover:bg-gray-300"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></a>`
@@ -258,50 +412,40 @@
                 }
 
                  appContainer.innerHTML = `
-                    <!-- Container com p-4 para layout padrão -->
                     <div class="p-4">
-                        <!-- Cabeçalho com nova cor e layout de cartão -->
+                        <!-- Cabeçalho com padding extra nas laterais para o texto não sobrepor botões -->
                         <div class="bg-gray-800 text-gray-100 p-6 rounded-2xl mb-6 shadow-lg relative">
-                             <a href="#" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
-                             <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-gray-100 hover:text-white">
+                             <a href="#" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white z-10"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
+                             <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-gray-100 hover:text-white z-10">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                              </button>
-                            <div class="text-center">
-                                <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${territoryName}</h1>
-                                <p class="text-xl text-gray-300">Quadra ${block.name}</p>
+                            <!-- Texto centralizado com padding seguro px-12 para não bater nos ícones -->
+                            <div class="text-center px-12">
+                                <h1 class="text-2xl font-bold leading-tight">${TERRITORY_ID} - ${data.name}</h1>
+                                <p class="text-xl text-gray-300 mt-1">Quadra ${blockName}</p>
                             </div>
                         </div>
-                        <!-- Conteúdo das Ruas -->
                         ${streetsContentHtml}
                     </div>`;
             }
 
-            function getStatusStyle(status) {
-                switch (status) {
-                    case 'DONE': return 'bg-blue-600 text-white';
-                    case 'DND': return 'bg-red-500 text-white';
-                    case 'F':
-                    case 'T':
-                    case 'C':
-                    case 'JW': return 'bg-gray-200 text-gray-800';
-                    default: return 'bg-white text-gray-800';
-                }
-            }
-            
             function renderStreetView(blockName, streetName, data) {
-                const block = data.blocks?.find(b => b.name === blockName);
+                // CORREÇÃO: Mesmo fix de string aqui
+                const block = data.blocks?.find(b => String(b.name) === blockName);
                 const street = block?.streets?.find(s => s.name === streetName);
                 if (!street) { window.location.hash = encodeURIComponent(blockName); return; }
                 document.title = `${streetName} - Quadra ${blockName}`;
                 
-                const houseNumbers = street.houses.split(',').map(h => h.trim()).filter(Boolean);
-                
+                const housesStr = street.houses || "";
+                const houseNumbers = housesStr.split(',').map(h => h.trim()).filter(Boolean);
+                const mapData = data.mapData?.[blockName]?.[streetName] || null;
+
                 let streetContentHtml;
                 if (houseNumbers.length === 0 || (houseNumbers.length === 1 && houseNumbers[0] === '0')) {
                     streetContentHtml = `
                         <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg shadow-md my-4" role="alert">
                             <p class="font-bold">Aviso</p>
-                            <p>Ainda não temos os numeros dessa rua, por favor envie para o meu whatsapp para que eu possa adicionar e atualizar as casas obrigado. ass: Guilherme</p>
+                            <p>Ainda não temos os numeros dessa rua.</p>
                         </div>
                     `;
                 } else {
@@ -313,72 +457,481 @@
                     }).join('');
 
                     streetContentHtml = `
-                        <h2 class="font-bold text-gray-500 mb-4">CASAS</h2>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="font-bold text-gray-500">CASAS</h2>
+                            <button id="toggle-map-btn" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-200 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13v-6m0 6l6-3m-6 3V7m0 0l6-3m0 0l5.447 2.724A1 1 0 0121 7.618v10.764a1 1 0 01-1.447.894L15 17m0 0v-6m0 6l-6-3" />
+                                </svg>
+                                Ver Mapa
+                            </button>
+                        </div>
+                        
+                        <!-- MAPA CONTAINER -->
+                        <div id="map-container-view" class="relative">
+                            <!-- Botão Discreto de Admin (Rua) -->
+                            <div id="street-lock-btn" class="admin-lock-btn hidden" title="Editar Trajeto">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+
+                            <div id="map-controls" class="absolute bottom-4 left-4 right-4 z-[500] flex flex-wrap gap-2 hidden justify-center">
+                                <button id="finish-draw-btn" class="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg hover:bg-blue-700 hidden flex-1 max-w-[150px]">Concluir Desenho</button>
+                                <button id="save-map-btn" class="bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg hover:bg-green-700 hidden flex-1 max-w-[150px]">Salvar Trajeto</button>
+                                <button id="reset-map-btn" class="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg hover:bg-red-600 hidden flex-1 max-w-[150px]">Refazer</button>
+                            </div>
+                            <div id="map-instructions" class="absolute top-2 left-1/2 transform -translate-x-1/2 z-[500] bg-white px-3 py-1 rounded-full shadow text-xs font-bold hidden text-center w-max text-gray-700 border border-gray-200">
+                                Toque no Início da Rua
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-4 sm:grid-cols-5 gap-4">${housesGridHtml}</div>
                     `;
                 }
                 
                 appContainer.innerHTML = `
-                    <!-- Container com p-4 para layout padrão -->
                     <div class="p-4">
-                        <!-- Cabeçalho com nova cor e layout de cartão -->
                         <div class="bg-gray-800 text-gray-100 p-6 rounded-2xl mb-6 shadow-lg relative">
-                            <a href="#${encodeURIComponent(blockName)}" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
-                            <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-gray-100 hover:text-white">
+                            <a href="#${encodeURIComponent(blockName)}" class="absolute top-0 left-0 h-full px-5 flex items-center text-gray-100 hover:text-white z-10"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg></a>
+                            <button id="info-btn" class="absolute top-0 right-0 h-full px-5 flex items-center text-gray-100 hover:text-white z-10">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </button>
-                            <div class="text-center">
-                                <h1 class="text-2xl font-bold">${TERRITORY_ID} - ${data.name}</h1>
-                                <p class="text-xl text-gray-300">Quadra ${blockName}</p>
-                                <p class="text-gray-300">${streetName}</p>
+                            <div class="text-center px-12">
+                                <h1 class="text-2xl font-bold leading-tight">${TERRITORY_ID} - ${data.name}</h1>
+                                <p class="text-xl text-gray-300 mt-1">Quadra ${blockName}</p>
+                                <p class="text-gray-300 break-words">${streetName}</p>
                             </div>
                         </div>
-                        <!-- Conteúdo das Casas -->
                         ${streetContentHtml}
                     </div>`;
+
+                document.getElementById('toggle-map-btn')?.addEventListener('click', () => {
+                    const mapDiv = document.getElementById('map-container-view');
+                    if (mapDiv.style.display === 'block') {
+                        mapDiv.style.display = 'none';
+                        document.getElementById('toggle-map-btn').innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13v-6m0 6l6-3m-6 3V7m0 0l6-3m0 0l5.447 2.724A1 1 0 0121 7.618v10.764a1 1 0 01-1.447.894L15 17m0 0v-6m0 6l-6-3" /></svg>
+                            Ver Mapa`;
+                        if(watchId) navigator.geolocation.clearWatch(watchId);
+                    } else {
+                        mapDiv.style.display = 'block';
+                        document.getElementById('toggle-map-btn').innerHTML = `Ocultar Mapa`;
+                        initMap(blockName, streetName, mapData);
+                    }
+                });
+
+                document.getElementById('save-map-btn')?.addEventListener('click', () => saveStreetPath(blockName, streetName));
+                document.getElementById('finish-draw-btn')?.addEventListener('click', finishDrawingMode);
+                document.getElementById('reset-map-btn')?.addEventListener('click', resetMapDrawing);
+                
+                document.getElementById('street-lock-btn')?.addEventListener('click', () => {
+                    if (checkPassword()) {
+                         document.getElementById('street-lock-btn').classList.add('hidden');
+                         document.getElementById('map-controls').classList.remove('hidden'); // Exibe o container de controles
+                         document.getElementById('reset-map-btn').classList.remove('hidden'); // Exibe o botão de refazer
+                         // Opcionalmente ativar modo de edição imediatamente
+                    } else {
+                         showNotification('Senha incorreta.', 'error');
+                    }
+                });
             }
 
-            function showConfirmationModal(blockName, streetName, houseNumber) {
-                const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || null;
-                const isDone = currentStatus === 'DONE';
-                confirmationModalText.textContent = isDone 
-                    ? `Deseja desmarcar a casa ${houseNumber} como feita?`
-                    : `Deseja marcar a casa ${houseNumber} como feita?`;
-                confirmActionBtn.dataset.blockName = blockName;
-                confirmActionBtn.dataset.streetName = streetName;
-                confirmActionBtn.dataset.houseNumber = houseNumber;
-                confirmationModal.classList.remove('hidden');
+            // --- LÓGICA DO MAPA GERAL ---
+
+            function initGlobalMap(savedData) {
+                if (globalMapInstance) return;
+
+                globalMapInstance = L.map('map-container-global');
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(globalMapInstance);
+                globalDrawingLayer = L.layerGroup().addTo(globalMapInstance);
+                
+                globalMapInstance.locate({setView: true, maxZoom: 16});
+
+                const userIcon = L.divIcon({
+                    className: 'user-location-marker',
+                    html: '<div style="background-color: #2563EB; width: 16px; height: 16px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>',
+                    iconSize: [16, 16]
+                });
+
+                if (navigator.geolocation) {
+                    globalWatchId = navigator.geolocation.watchPosition(
+                        (pos) => {
+                            const latlng = [pos.coords.latitude, pos.coords.longitude];
+                            if (!globalUserMarker) {
+                                globalUserMarker = L.marker(latlng, {icon: userIcon}).addTo(globalMapInstance);
+                                if (!savedData) globalMapInstance.setView(latlng, 16); 
+                            } else {
+                                globalUserMarker.setLatLng(latlng);
+                            }
+                        },
+                        (err) => console.error(err), { enableHighAccuracy: true }
+                    );
+                }
+
+                // Carregar dados salvos
+                if (savedData) {
+                    currentPolygons = savedData.polygons || [];
+                    currentLabels = savedData.labels || [];
+                    
+                    // Renderizar polígonos
+                    currentPolygons.forEach(polyData => {
+                        // Suporte para estrutura antiga (array) e nova (objeto) para evitar erro de array aninhado no Firestore
+                        const points = Array.isArray(polyData) ? polyData : polyData.points;
+                        if (!points) return;
+
+                        const latlngs = points.map(pt => [pt.lat, pt.lng]);
+                        L.polygon(latlngs, {color: 'blue', fillColor: '#3b82f6', fillOpacity: 0.2}).addTo(globalDrawingLayer);
+                    });
+
+                    // Renderizar labels
+                    currentLabels.forEach(lbl => {
+                        const icon = L.divIcon({
+                            className: 'text-label-icon',
+                            html: lbl.text,
+                            iconSize: [40, 20],
+                            iconAnchor: [20, 10]
+                        });
+                        L.marker([lbl.lat, lbl.lng], {icon: icon}).addTo(globalDrawingLayer);
+                    });
+
+                    // Se tem dados, bloqueia edição e mostra botão discreto
+                    document.getElementById('global-map-controls').classList.add('hidden');
+                    document.getElementById('global-lock-btn').classList.remove('hidden');
+
+                    if (currentPolygons.length > 0) {
+                         // Pega o primeiro polígono válido para centralizar
+                         const firstPolyData = currentPolygons[0];
+                         const points = Array.isArray(firstPolyData) ? firstPolyData : firstPolyData.points;
+                         if (points) {
+                             const firstPoly = points.map(pt => [pt.lat, pt.lng]);
+                             globalMapInstance.fitBounds(L.polygon(firstPoly).getBounds(), {padding: [50, 50]});
+                         }
+                    }
+
+                } else {
+                    document.getElementById('global-map-controls').classList.remove('hidden');
+                }
             }
 
-            function closeConfirmationModal() {
-                confirmationModal.classList.add('hidden');
+            function startDrawingPolygon(e) {
+                if (e && e.stopPropagation) { e.stopPropagation(); e.preventDefault(); }
+                isDrawingGlobalPolygon = true;
+                currentPolygonPoints = [];
+                document.getElementById('global-instructions').innerText = "Toque nos cantos da Quadra";
+                document.getElementById('global-instructions').classList.remove('hidden');
+                document.getElementById('finish-poly-btn').classList.remove('hidden');
+                document.getElementById('add-polygon-btn').classList.add('hidden');
+                document.getElementById('add-label-btn').classList.add('hidden');
+
+                // Atraso para evitar registro imediato
+                setTimeout(() => {
+                    globalMapInstance.on('click', (e) => {
+                        if (!isDrawingGlobalPolygon) return;
+                        const latlng = e.latlng;
+                        currentPolygonPoints.push({lat: latlng.lat, lng: latlng.lng});
+                        
+                        L.circleMarker(latlng, {radius: 4, color: 'blue'}).addTo(globalDrawingLayer);
+                        
+                        if (currentPolygonPoints.length > 1) {
+                            const pts = currentPolygonPoints.map(p => [p.lat, p.lng]);
+                            // Remove linha anterior temporária se houver (simplificação: desenha por cima)
+                            L.polyline(pts, {color: 'blue', dashArray: '5, 5'}).addTo(globalDrawingLayer);
+                        }
+                    });
+                }, 300);
+            }
+
+            function finishPolygon() {
+                isDrawingGlobalPolygon = false;
+                globalMapInstance.off('click'); // Remove listener de polígono
+
+                if (currentPolygonPoints.length > 2) {
+                    // Firestore não aceita arrays de arrays. Salvamos como objeto.
+                    currentPolygons.push({ points: [...currentPolygonPoints] });
+                    
+                    // Redesenha limpo
+                    const latlngs = currentPolygonPoints.map(p => [p.lat, p.lng]);
+                    L.polygon(latlngs, {color: 'blue', fillColor: '#3b82f6', fillOpacity: 0.2}).addTo(globalDrawingLayer);
+                    showNotification('Quadra desenhada!', 'success');
+                } else {
+                    showNotification('Polígono cancelado (muito pequeno).', 'info');
+                }
+                
+                currentPolygonPoints = [];
+                document.getElementById('global-instructions').classList.add('hidden');
+                document.getElementById('finish-poly-btn').classList.add('hidden');
+                document.getElementById('add-polygon-btn').classList.remove('hidden');
+                document.getElementById('add-label-btn').classList.remove('hidden');
+                document.getElementById('save-global-btn').classList.remove('hidden');
+            }
+
+            function enableLabelMode(e) {
+                if (e && e.stopPropagation) { e.stopPropagation(); e.preventDefault(); }
+                document.getElementById('global-instructions').innerText = "Toque onde quer a letra";
+                document.getElementById('global-instructions').classList.remove('hidden');
+
+                // Atraso para evitar registro imediato
+                setTimeout(() => {
+                    // Um click apenas
+                    globalMapInstance.once('click', (e) => {
+                        const text = prompt("Digite a Letra ou Nome da Quadra:");
+                        if (text) {
+                            currentLabels.push({lat: e.latlng.lat, lng: e.latlng.lng, text: text});
+                            const icon = L.divIcon({
+                                className: 'text-label-icon',
+                                html: text,
+                                iconSize: [40, 20],
+                                iconAnchor: [20, 10]
+                            });
+                            L.marker(e.latlng, {icon: icon}).addTo(globalDrawingLayer);
+                            document.getElementById('save-global-btn').classList.remove('hidden');
+                        }
+                        document.getElementById('global-instructions').classList.add('hidden');
+                    });
+                }, 300);
+            }
+
+            async function saveGlobalMap() {
+                // Garantir que todos os polígonos estejam no formato de objeto antes de salvar
+                const sanitizedPolygons = currentPolygons.map(p => Array.isArray(p) ? { points: p } : p);
+
+                const dataToSave = {
+                    polygons: sanitizedPolygons,
+                    labels: currentLabels
+                };
+                
+                const btn = document.getElementById('save-global-btn');
+                const originalText = btn.innerText;
+                btn.innerText = "Salvando...";
+                btn.disabled = true;
+
+                // Tenta reconectar se caiu
+                if (!auth.currentUser) {
+                    try { await signInAnonymously(auth); } catch(e) { 
+                        showNotification('Erro de login. Tente recarregar.', 'error'); 
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                        return; 
+                    }
+                }
+
+                try {
+                     // Força setDoc com merge para garantir estrutura profunda
+                     await setDoc(territoryDocRef, { mapData: { global: dataToSave } }, { merge: true });
+                     showNotification('Mapa Geral Salvo!', 'success');
+                     document.getElementById('global-map-controls').classList.add('hidden');
+                     document.getElementById('global-lock-btn').classList.remove('hidden'); // Mostra botão discreto
+                } catch(e) {
+                     console.error("Erro ao salvar mapa global:", e);
+                     showNotification('Erro ao salvar mapa (' + e.code + ').', 'error');
+                } finally {
+                     btn.innerText = originalText;
+                     btn.disabled = false;
+                }
+            }
+
+            function resetGlobalMap() {
+                globalDrawingLayer.clearLayers();
+                currentPolygons = [];
+                currentLabels = [];
+                document.getElementById('global-lock-btn').classList.add('hidden');
+                document.getElementById('global-map-controls').classList.remove('hidden');
+                document.getElementById('save-global-btn').classList.add('hidden');
+                document.getElementById('reset-global-btn').classList.add('hidden'); // Esconde botão de apagar após reset
+            }
+
+
+            // --- LÓGICA DO MAPA RUA (EXISTENTE) ---
+
+            function initMap(blockName, streetName, savedCoords) {
+                if (mapInstance) return;
+
+                mapInstance = L.map('map-container-view');
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapInstance);
+                drawingLayerGroup = L.layerGroup().addTo(mapInstance);
+                mapInstance.locate({setView: true, maxZoom: 18});
+
+                const userIcon = L.divIcon({
+                    className: 'user-location-marker',
+                    html: '<div style="background-color: #2563EB; width: 16px; height: 16px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 4px rgba(0,0,0,0.5);"></div>',
+                    iconSize: [16, 16]
+                });
+
+                if (navigator.geolocation) {
+                    watchId = navigator.geolocation.watchPosition(
+                        (pos) => {
+                            const latlng = [pos.coords.latitude, pos.coords.longitude];
+                            if (!userMarker) {
+                                userMarker = L.marker(latlng, {icon: userIcon}).addTo(mapInstance);
+                                if (!savedCoords) mapInstance.setView(latlng, 18); 
+                            } else {
+                                userMarker.setLatLng(latlng);
+                            }
+                        },
+                        (err) => console.error(err), { enableHighAccuracy: true }
+                    );
+                }
+
+                if (savedCoords) {
+                    let latlngs = [];
+                    if (Array.isArray(savedCoords)) {
+                        latlngs = savedCoords.map(pt => [pt.lat, pt.lng]);
+                    } else if (savedCoords.start && savedCoords.end) {
+                        latlngs = [[savedCoords.start.lat, savedCoords.start.lng], [savedCoords.end.lat, savedCoords.end.lng]];
+                    }
+
+                    if (latlngs.length > 0) {
+                        streetPolyline = L.polyline(latlngs, {color: 'red', weight: 6, opacity: 0.7}).addTo(drawingLayerGroup);
+                        mapInstance.fitBounds(streetPolyline.getBounds(), {padding: [20, 20]});
+                        
+                        // Estado Salvo: Mostra apenas botão discreto
+                        document.getElementById('map-controls').classList.add('hidden');
+                        document.getElementById('street-lock-btn').classList.remove('hidden');
+                    }
+                } else {
+                    enableDrawingMode();
+                }
+            }
+
+            function enableDrawingMode() {
+                const instructions = document.getElementById('map-instructions');
+                const controls = document.getElementById('map-controls');
+                
+                instructions.classList.remove('hidden');
+                instructions.innerText = "Toque no mapa: Início da rua";
+                controls.classList.remove('hidden');
+                
+                // Botão de refazer escondido enquanto desenha pela primeira vez
+                document.getElementById('reset-map-btn').classList.add('hidden');
+
+                tempMarkers = [];
+
+                mapInstance.on('click', function(e) {
+                    const marker = L.circleMarker(e.latlng, { radius: 5, color: 'blue', fillColor: '#3b82f6', fillOpacity: 1 }).addTo(drawingLayerGroup);
+                    tempMarkers.push({lat: e.latlng.lat, lng: e.latlng.lng, markerObj: marker});
+
+                    if (tempMarkers.length === 1) {
+                        instructions.innerText = "Agora toque no próximo ponto da curva";
+                        document.getElementById('finish-draw-btn').classList.remove('hidden');
+                    } else {
+                        redrawPreviewLine();
+                        instructions.innerText = "Continue clicando para fazer a curva ou Concluir";
+                        document.getElementById('finish-draw-btn').classList.remove('hidden');
+                    }
+                });
+            }
+            
+            function redrawPreviewLine() {
+                if (streetPolyline) drawingLayerGroup.removeLayer(streetPolyline);
+                if (tempMarkers.length > 1) {
+                    const latlngs = tempMarkers.map(m => [m.lat, m.lng]);
+                    streetPolyline = L.polyline(latlngs, {color: 'blue', dashArray: '5, 10'}).addTo(drawingLayerGroup);
+                }
+            }
+
+            function finishDrawingMode() {
+                if (tempMarkers.length < 2) {
+                    showNotification('Marque pelo menos o início e o fim da rua.', 'info');
+                    return;
+                }
+                
+                mapInstance.off('click');
+                
+                document.getElementById('map-instructions').innerText = "Se ficou bom, clique em Salvar";
+                document.getElementById('finish-draw-btn').classList.add('hidden');
+                document.getElementById('save-map-btn').classList.remove('hidden');
+                document.getElementById('reset-map-btn').classList.remove('hidden');
+                
+                if (streetPolyline) drawingLayerGroup.removeLayer(streetPolyline);
+                const latlngs = tempMarkers.map(m => [m.lat, m.lng]);
+                streetPolyline = L.polyline(latlngs, {color: 'blue', weight: 4}).addTo(drawingLayerGroup);
+            }
+
+            function resetMapDrawing(e) {
+                if (e && e.stopPropagation) { e.stopPropagation(); e.preventDefault(); }
+                
+                drawingLayerGroup.clearLayers();
+                tempMarkers = [];
+                streetPolyline = null;
+                document.getElementById('save-map-btn').classList.add('hidden');
+                document.getElementById('finish-draw-btn').classList.add('hidden');
+                document.getElementById('reset-map-btn').classList.add('hidden');
+                
+                // Oculta botão discreto se estiver resetando
+                document.getElementById('street-lock-btn').classList.add('hidden');
+                document.getElementById('map-controls').classList.remove('hidden');
+
+                mapInstance.off('click');
+                
+                // Adiciona um pequeno delay para garantir que o clique no botão não se propague para o mapa
+                setTimeout(() => {
+                    enableDrawingMode();
+                }, 300);
+            }
+
+            async function saveStreetPath(blockName, streetName) {
+                if (tempMarkers.length < 2) return;
+                const coordsArray = tempMarkers.map(m => ({lat: m.lat, lng: m.lng}));
+                
+                const btn = document.getElementById('save-map-btn');
+                const originalText = btn.innerText;
+                btn.innerText = "Salvando...";
+                btn.disabled = true;
+
+                // Tenta reconectar se caiu a sessão
+                if (!auth.currentUser) {
+                    try { await signInAnonymously(auth); } catch(e) { 
+                        showNotification('Erro de login. Tente recarregar.', 'error'); 
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                        return; 
+                    }
+                }
+
+                try {
+                    // Força setDoc com merge para garantir estrutura profunda
+                    await setDoc(territoryDocRef, { mapData: { [blockName]: { [streetName]: coordsArray } } }, { merge: true });
+                    
+                    showNotification('Trajeto salvo com sucesso!', 'success');
+                    
+                    document.getElementById('map-instructions').classList.add('hidden');
+                    document.getElementById('map-controls').classList.add('hidden'); // Esconde controles de salvar/refazer
+                    document.getElementById('street-lock-btn').classList.remove('hidden'); // Mostra botão discreto
+                    
+                    drawingLayerGroup.clearLayers();
+                    const finalLatlngs = coordsArray.map(pt => [pt.lat, pt.lng]);
+                    streetPolyline = L.polyline(finalLatlngs, {color: 'red', weight: 6, opacity: 0.7}).addTo(drawingLayerGroup);
+                    mapInstance.off('click'); 
+
+                } catch (error) {
+                    console.error("Erro ao salvar trajeto:", error);
+                    showNotification('Erro ao salvar (' + error.code + ').', 'error');
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            }
+
+            function getStatusStyle(status) {
+                switch (status) {
+                    case 'DONE': return 'bg-blue-600 text-white';
+                    case 'DND': return 'bg-red-500 text-white';
+                    case 'F': case 'T': case 'C': case 'JW': return 'bg-gray-200 text-gray-800';
+                    default: return 'bg-white text-gray-800';
+                }
             }
             
             async function setHouseStatus(blockName, streetName, houseNumber, status) {
                 const path = `status.${blockName}.${streetName}.${houseNumber}`;
-                const docRef = territoryDocRef;
-                
                 try {
-                    if (status === null) {
-                        await updateDoc(docRef, { [path]: deleteField() });
-                    } else {
-                        await updateDoc(docRef, { [path]: status });
-                    }
+                    if (status === null) await updateDoc(territoryDocRef, { [path]: deleteField() });
+                    else await updateDoc(territoryDocRef, { [path]: status });
                 } catch(error) {
-                     console.error("Erro ao salvar status:", error);
-                     // Se o erro for por aninhamento, tenta criar o objeto pai
                     if (error.code === 'invalid-argument') {
-                         await setDoc(docRef, { status: { [blockName]: { [streetName]: { [houseNumber]: status } } } }, { merge: true });
-                    } else {
-                        throw error;
+                         await setDoc(territoryDocRef, { status: { [blockName]: { [streetName]: { [houseNumber]: status } } } }, { merge: true });
                     }
                 }
-            }
-
-            async function toggleDoneStatus(blockName, streetName, houseNumber) {
-                const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || null;
-                const newStatus = currentStatus === 'DONE' ? null : 'DONE';
-                await setHouseStatus(blockName, streetName, houseNumber, newStatus);
             }
 
             appContainer.addEventListener('click', (e) => {
@@ -396,7 +949,7 @@
                 }
                 if (e.target.closest('#territory-map-icon')) {
                     const baseImageName = `territorio${TERRITORY_ID}`;
-                    modalMapImage.src = `${baseImageName}.jpg`; // Tenta carregar JPG primeiro
+                    modalMapImage.src = `${baseImageName}.jpg`;
                     mapImageModal.classList.remove('hidden');
                 }
                 if (e.target.closest('#info-btn')) {
@@ -404,48 +957,41 @@
                 }
             });
             
-            // Lógica para tentar carregar PNG se JPG falhar
-            modalMapImage.onerror = () => {
-                const currentSrc = modalMapImage.src;
-                // Evita loop infinito se nem JPG nem PNG existirem
-                if (currentSrc.endsWith('.jpg')) {
-                    modalMapImage.src = currentSrc.replace('.jpg', '.png');
-                } else {
-                    // Se já tentou PNG e falhou, mostra a imagem reserva
-                    modalMapImage.src = 'https://placehold.co/800x600/EFEFEF/AAAAAA&text=Mapa+Nao+Encontrado';
-                }
-            };
-            
-            closeMapModalBtn.addEventListener('click', () => mapImageModal.classList.add('hidden'));
-            mapImageModal.addEventListener('click', (e) => { if (e.target === mapImageModal) mapImageModal.classList.add('hidden'); });
+            function showConfirmationModal(blockName, streetName, houseNumber) {
+                const currentStatus = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] || null;
+                const isDone = currentStatus === 'DONE';
+                confirmationModalText.textContent = isDone ? `Deseja desmarcar a casa ${houseNumber}?` : `Deseja marcar a casa ${houseNumber} como feita?`;
+                confirmActionBtn.dataset.blockName = blockName;
+                confirmActionBtn.dataset.streetName = streetName;
+                confirmActionBtn.dataset.houseNumber = houseNumber;
+                confirmationModal.classList.remove('hidden');
+            }
+
+            function closeConfirmationModal() { confirmationModal.classList.add('hidden'); }
 
             confirmActionBtn.addEventListener('click', () => {
                 const { blockName, streetName, houseNumber } = confirmActionBtn.dataset;
                 const isCurrentlyDone = currentTerritoryData.status?.[blockName]?.[streetName]?.[houseNumber] === 'DONE';
-                const successMessage = isCurrentlyDone ? 'Casa desmarcada com sucesso!' : 'Casa marcada com sucesso!';
-                
                 closeConfirmationModal();
-
-                toggleDoneStatus(blockName, streetName, houseNumber)
-                    .then(() => {
-                        showNotification(successMessage, 'success');
-                    })
-                    .catch(err => {
-                        console.error("Erro ao salvar:", err);
-                        showNotification('Erro ao salvar.', 'error');
-                    });
+                setHouseStatus(blockName, streetName, houseNumber, isCurrentlyDone ? null : 'DONE')
+                    .then(() => showNotification(isCurrentlyDone ? 'Desmarcada!' : 'Marcada!', 'success'))
+                    .catch(() => showNotification('Erro ao salvar.', 'error'));
             });
 
             cancelActionBtn.addEventListener('click', closeConfirmationModal);
             confirmationModal.addEventListener('click', (e) => { if (e.target === confirmationModal) closeConfirmationModal(); });
-            
             closeInfoModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
             infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.add('hidden'); });
+            
+            modalMapImage.onerror = () => {
+                if (modalMapImage.src.endsWith('.jpg')) modalMapImage.src = modalMapImage.src.replace('.jpg', '.png');
+                else modalMapImage.src = 'https://placehold.co/800x600/EFEFEF/AAAAAA&text=Mapa+Nao+Encontrado';
+            };
+            closeMapModalBtn.addEventListener('click', () => mapImageModal.classList.add('hidden'));
+            mapImageModal.addEventListener('click', (e) => { if (e.target === mapImageModal) mapImageModal.classList.add('hidden'); });
 
             window.addEventListener('hashchange', handleRouteChange);
-            handleRouteChange();
         });
     </script>
-
 </body>
 </html>
