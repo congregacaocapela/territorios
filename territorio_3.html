@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestão do Território + GPS</title>
+    <title>Gestão do Território</title>
     <link rel="icon" href="favicon.png" onerror="this.href='favicon.jpg'">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -66,6 +66,12 @@
             text-shadow: 2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white;
             text-align: center;
             white-space: nowrap;
+            cursor: pointer !important; /* Força o cursor de mãozinha */
+            transition: transform 0.2s; /* Animação suave ao passar o mouse */
+        }
+        .text-label-icon:hover {
+            transform: scale(1.2); /* Aumenta um pouco ao passar o mouse */
+            z-index: 1000 !important;
         }
 
         /* Botão Discreto de Admin */
@@ -592,7 +598,13 @@
                             iconSize: [40, 20],
                             iconAnchor: [20, 10]
                         });
-                        L.marker([lbl.lat, lbl.lng], {icon: icon}).addTo(globalDrawingLayer);
+                        const marker = L.marker([lbl.lat, lbl.lng], {icon: icon}).addTo(globalDrawingLayer);
+                        
+                        // INTERAÇÃO: Clicar na letra abre a quadra
+                        marker.on('click', (e) => {
+                            L.DomEvent.stopPropagation(e); // Evita conflito com desenho
+                            window.location.hash = encodeURIComponent(lbl.text);
+                        });
                     });
 
                     // Se tem dados, bloqueia edição e mostra botão discreto
@@ -702,20 +714,16 @@
                 };
                 
                 const btn = document.getElementById('save-global-btn');
-                const originalText = btn ? btn.innerText : 'Salvar';
-                if(btn) {
-                    btn.innerText = "Salvando...";
-                    btn.disabled = true;
-                }
+                const originalText = btn.innerText;
+                btn.innerText = "Salvando...";
+                btn.disabled = true;
 
                 // Tenta reconectar se caiu
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) { 
                         showNotification('Erro de login. Tente recarregar.', 'error'); 
-                        if(btn) {
-                            btn.innerText = originalText;
-                            btn.disabled = false;
-                        }
+                        btn.innerText = originalText;
+                        btn.disabled = false;
                         return; 
                     }
                 }
@@ -724,16 +732,14 @@
                      // Força setDoc com merge para garantir estrutura profunda
                      await setDoc(territoryDocRef, { mapData: { global: dataToSave } }, { merge: true });
                      showNotification('Mapa Geral Salvo!', 'success');
-                     
-                     // Não mexemos no DOM do mapa aqui, deixamos o onSnapshot recarregar.
-
+                     document.getElementById('global-map-controls').classList.add('hidden');
+                     document.getElementById('global-lock-btn').classList.remove('hidden'); // Mostra botão discreto
                 } catch(e) {
                      console.error("Erro ao salvar mapa global:", e);
                      showNotification('Erro ao salvar mapa (' + e.code + ').', 'error');
-                     if(btn) {
-                         btn.innerText = originalText;
-                         btn.disabled = false;
-                     }
+                } finally {
+                     btn.innerText = originalText;
+                     btn.disabled = false;
                 }
             }
 
@@ -881,20 +887,16 @@
                 const coordsArray = tempMarkers.map(m => ({lat: m.lat, lng: m.lng}));
                 
                 const btn = document.getElementById('save-map-btn');
-                const originalText = btn ? btn.innerText : 'Salvar Trajeto';
-                if(btn) {
-                    btn.innerText = "Salvando...";
-                    btn.disabled = true;
-                }
+                const originalText = btn.innerText;
+                btn.innerText = "Salvando...";
+                btn.disabled = true;
 
                 // Tenta reconectar se caiu a sessão
                 if (!auth.currentUser) {
                     try { await signInAnonymously(auth); } catch(e) { 
                         showNotification('Erro de login. Tente recarregar.', 'error'); 
-                        if(btn) {
-                            btn.innerText = originalText;
-                            btn.disabled = false;
-                        }
+                        btn.innerText = originalText;
+                        btn.disabled = false;
                         return; 
                     }
                 }
@@ -905,15 +907,21 @@
                     
                     showNotification('Trajeto salvo com sucesso!', 'success');
                     
-                    // Não mexemos no DOM do mapa aqui, deixamos o onSnapshot recarregar.
+                    document.getElementById('map-instructions').classList.add('hidden');
+                    document.getElementById('map-controls').classList.add('hidden'); // Esconde controles de salvar/refazer
+                    document.getElementById('street-lock-btn').classList.remove('hidden'); // Mostra botão discreto
+                    
+                    drawingLayerGroup.clearLayers();
+                    const finalLatlngs = coordsArray.map(pt => [pt.lat, pt.lng]);
+                    streetPolyline = L.polyline(finalLatlngs, {color: 'red', weight: 6, opacity: 0.7}).addTo(drawingLayerGroup);
+                    mapInstance.off('click'); 
 
                 } catch (error) {
                     console.error("Erro ao salvar trajeto:", error);
                     showNotification('Erro ao salvar (' + error.code + ').', 'error');
-                    if(btn) {
-                        btn.innerText = originalText;
-                        btn.disabled = false;
-                    }
+                } finally {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
                 }
             }
 
