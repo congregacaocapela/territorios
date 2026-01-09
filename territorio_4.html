@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestão do Território + GPS</title>
+    <title>Gestão do Território</title>
     <link rel="icon" href="favicon.png" onerror="this.href='favicon.jpg'">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -66,6 +66,12 @@
             text-shadow: 2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white;
             text-align: center;
             white-space: nowrap;
+            cursor: pointer !important; /* Força o cursor de mãozinha */
+            transition: transform 0.2s; /* Animação suave ao passar o mouse */
+        }
+        .text-label-icon:hover {
+            transform: scale(1.2); /* Aumenta um pouco ao passar o mouse */
+            z-index: 1000 !important;
         }
 
         /* Botão Discreto de Admin */
@@ -592,7 +598,13 @@
                             iconSize: [40, 20],
                             iconAnchor: [20, 10]
                         });
-                        L.marker([lbl.lat, lbl.lng], {icon: icon}).addTo(globalDrawingLayer);
+                        const marker = L.marker([lbl.lat, lbl.lng], {icon: icon}).addTo(globalDrawingLayer);
+                        
+                        // INTERAÇÃO: Clicar na letra abre a quadra
+                        marker.on('click', (e) => {
+                            L.DomEvent.stopPropagation(e); // Evita conflito com desenho
+                            window.location.hash = encodeURIComponent(lbl.text);
+                        });
                     });
 
                     // Se tem dados, bloqueia edição e mostra botão discreto
