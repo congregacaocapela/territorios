@@ -13,7 +13,8 @@
     <link rel="apple-touch-icon" href="https://placehold.co/192x192/4f46e5/ffffff?text=PT">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Substituído XLSX por html2pdf para melhor formatação visual -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -183,7 +184,7 @@
             </div>
         </div>
         <div class="mt-8 text-center flex flex-col sm:flex-row justify-center gap-4">
-            <button id="s13-baixar-excel" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-green-700">Baixar Planilha (Excel)</button>
+            <button id="s13-baixar-pdf" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-green-700">Baixar S-13 (PDF)</button>
             <button id="s13-reset-btn" class="bg-red-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-red-700">Zerar Planilha</button>
         </div>
     </div>
@@ -370,12 +371,21 @@
         // =================================================================
         const customAlert = (message) => {
             const modal = document.getElementById('custom-alert-modal');
-            document.getElementById('custom-alert-message').textContent = message;
-            modal.classList.remove('hidden');
+            const msgElem = document.getElementById('custom-alert-message');
+            if(modal && msgElem) {
+                msgElem.textContent = message;
+                modal.classList.remove('hidden');
+            } else {
+                alert(message);
+            }
         };
-        document.getElementById('custom-alert-ok-btn').addEventListener('click', () => {
-            document.getElementById('custom-alert-modal').classList.add('hidden');
-        });
+        const alertOkBtn = document.getElementById('custom-alert-ok-btn');
+        if (alertOkBtn) {
+            alertOkBtn.addEventListener('click', () => {
+                const modal = document.getElementById('custom-alert-modal');
+                if(modal) modal.classList.add('hidden');
+            });
+        }
 
 
         // =================================================================
@@ -534,6 +544,7 @@
                         ...this.defaultConfig, ...configData,
                         weekday: { ...this.defaultConfig.weekday, ...(configData.weekday || {}) },
                         weekend: { ...this.defaultConfig.weekend, ...(configData.weekend || {}) },
+                        weekendGroupNames: { ...this.defaultConfig.weekendGroupNames, ...(configData.weekendGroupNames || {}) }
                     };
                     this.renderAssignmentCards();
                 });
@@ -579,6 +590,7 @@
                 this.setMode(this.state.mode, false);
             },
             renderGrid() {
+                if (!this.ui.grid) return;
                 this.ui.grid.innerHTML = '';
                 if (!this.data) return;
                 const territoriesToDisplay = this.data.filter(t => this.state.showArchived ? this.state.archived.includes(t.id) : !this.state.archived.includes(t.id));
@@ -634,6 +646,7 @@
                 return { completedCount, totalCount, progress, statusText: s.text, statusColorClass: s.color, textColorClass: s.textC, bgColorClass: s.bgC };
             },
             renderAssignmentCards() {
+                if (!this.ui.weekdayContainer || !this.ui.weekendContainer) return;
                 this.ui.weekdayContainer.innerHTML = '';
                 const dayOffsets = { 'SEGUNDA': 0, 'TERÇA': 1, 'QUARTA': 2, 'QUINTA': 3, 'SEXTA': 4 };
                 const startDate = this.getAssignmentStartDate();
@@ -751,11 +764,11 @@
                     return `${day}/${month}`;
                 };
                 const startDate = this.getAssignmentStartDate();
-                if (this.state.mode === 'weekday') {
+                if (this.state.mode === 'weekday' && this.ui.weekDates) {
                     const endDate = new Date(startDate.getTime());
                     endDate.setUTCDate(startDate.getUTCDate() + 4);
                     this.ui.weekDates.textContent = `Programação para a semana de ${format(startDate)} a ${format(endDate)}`;
-                } else {
+                } else if (this.ui.weekDates) {
                     const endDate = new Date(startDate.getTime());
                     endDate.setUTCDate(startDate.getUTCDate() + 1);
                     this.ui.weekDates.textContent = `Programação para o final de semana de ${format(startDate)} e ${format(endDate)}`;
@@ -763,9 +776,14 @@
             },
             setMode(mode, doSave = true) {
                 this.state.mode = mode; const isWeekday = mode === 'weekday';
-                this.ui.modeWeekdayBtn.classList.toggle('mode-btn-active', isWeekday); this.ui.modeWeekdayBtn.classList.toggle('mode-btn-inactive', !isWeekday);
-                this.ui.modeWeekendBtn.classList.toggle('mode-btn-active', !isWeekday); this.ui.modeWeekendBtn.classList.toggle('mode-btn-inactive', isWeekday);
-                this.ui.weekdayContainer.classList.toggle('hidden', !isWeekday); this.ui.weekendContainer.classList.toggle('hidden', isWeekday);
+                if(this.ui.modeWeekdayBtn) {
+                    this.ui.modeWeekdayBtn.classList.toggle('mode-btn-active', isWeekday); this.ui.modeWeekdayBtn.classList.toggle('mode-btn-inactive', !isWeekday);
+                }
+                if(this.ui.modeWeekendBtn) {
+                    this.ui.modeWeekendBtn.classList.toggle('mode-btn-active', !isWeekday); this.ui.modeWeekendBtn.classList.toggle('mode-btn-inactive', isWeekday);
+                }
+                if(this.ui.weekdayContainer) this.ui.weekdayContainer.classList.toggle('hidden', !isWeekday);
+                if(this.ui.weekendContainer) this.ui.weekendContainer.classList.toggle('hidden', isWeekday);
                 this.updateDateDisplay(); 
                 this.renderAssignmentCards(); // Re-render cards to show correct dates
                 if (doSave) this.saveState();
@@ -773,30 +791,42 @@
             openStatusModal(id) {
                 const t = this.data.find(td => td.id === id); const modal = this.ui.statusModal;
                 if (!t) { customAlert("Território não encontrado."); return; }
-                modal.querySelector('#status-modal-title').textContent = `Território ${t.id}`; modal.dataset.currentTerritoryId = id;
+                const title = modal.querySelector('#status-modal-title');
+                if(title) title.textContent = `Território ${t.id}`; 
+                modal.dataset.currentTerritoryId = id;
                 
                 // NOVO: Lógica para Designação Pessoal
                 const select = modal.querySelector('#personal-assignment-select');
-                select.innerHTML = '<option value="">Ninguém (Padrão)</option>';
-                s13App.state.publicadores.forEach(name => {
-                    select.innerHTML += `<option value="${name}">${name}</option>`;
-                });
-                select.value = this.state.personalAssignments[id] || "";
+                if (select) {
+                    select.innerHTML = '<option value="">Ninguém (Padrão)</option>';
+                    s13App.state.publicadores.forEach(name => {
+                        select.innerHTML += `<option value="${name}">${name}</option>`;
+                    });
+                    select.value = this.state.personalAssignments[id] || "";
+                }
                 
                 // Lógica antiga das Quadras
                 const container = modal.querySelector('#status-modal-blocks-container');
-                container.innerHTML = `<div class="flex items-center justify-between bg-gray-200 p-3 rounded-lg border-b-2 border-gray-300 mb-3"><label for="select-all-blocks" class="font-bold text-gray-700">Marcar Todas as Quadras</label><input type="checkbox" id="select-all-blocks" class="h-6 w-6 rounded text-blue-600"></div>`;
-                const wrapper = document.createElement('div'); wrapper.className = 'space-y-3'; let allChecked = true;
-                t.blocks.forEach(block => {
-                    const isChecked = this.state.status[id] && this.state.status[id][block]; if (!isChecked) allChecked = false;
-                    wrapper.innerHTML += `<div class="flex items-center justify-between bg-gray-100 p-3 rounded-lg"><label for="block-${block}" class="font-medium">Quadra ${block}</label><input type="checkbox" id="block-${block}" ${isChecked ? 'checked' : ''} class="h-6 w-6 block-checkbox" data-block="${block}"></div>`;
-                });
-                container.appendChild(wrapper); container.querySelector('#select-all-blocks').checked = allChecked; modal.classList.remove('hidden');
+                if(container) {
+                    container.innerHTML = `<div class="flex items-center justify-between bg-gray-200 p-3 rounded-lg border-b-2 border-gray-300 mb-3"><label for="select-all-blocks" class="font-bold text-gray-700">Marcar Todas as Quadras</label><input type="checkbox" id="select-all-blocks" class="h-6 w-6 rounded text-blue-600"></div>`;
+                    const wrapper = document.createElement('div'); wrapper.className = 'space-y-3'; let allChecked = true;
+                    t.blocks.forEach(block => {
+                        const isChecked = this.state.status[id] && this.state.status[id][block]; if (!isChecked) allChecked = false;
+                        wrapper.innerHTML += `<div class="flex items-center justify-between bg-gray-100 p-3 rounded-lg"><label for="block-${block}" class="font-medium">Quadra ${block}</label><input type="checkbox" id="block-${block}" ${isChecked ? 'checked' : ''} class="h-6 w-6 block-checkbox" data-block="${block}"></div>`;
+                    });
+                    container.appendChild(wrapper); 
+                    const selectAll = container.querySelector('#select-all-blocks');
+                    if(selectAll) selectAll.checked = allChecked;
+                }
+                modal.classList.remove('hidden');
             },
             openSelectionModal(key) {
                 const modal = this.ui.selectionModal; modal.dataset.currentKey = key;
-                modal.querySelector('#selection-modal-title').textContent = `Selecionar para ${key}`;
-                const container = modal.querySelector('#selection-modal-body'); container.innerHTML = '';
+                const title = modal.querySelector('#selection-modal-title');
+                if(title) title.textContent = `Selecionar para ${key}`;
+                const container = modal.querySelector('#selection-modal-body'); 
+                if(!container) return;
+                container.innerHTML = '';
                 
                 const allSelections = Object.values(this.state.weekdaySelections).flat().concat(Object.values(this.state.weekendSelections).map(v => Array.isArray(v) ? v : (v.territories || [])).flat());
                 
@@ -841,33 +871,53 @@
                 modal.classList.remove('hidden');
             },
             openSettingsModal() {
-                this.ui.weekdaySettingsContainer.innerHTML = '';
-                this.ui.weekendSettingsContainer.innerHTML = '';
-                for (const [key, value] of Object.entries(this.state.config.weekday)) {
-                    this.ui.weekdaySettingsContainer.innerHTML += `<div><label for="setting-${key}" class="block text-sm font-medium text-gray-700">${key}</label><input type="text" id="setting-${key}" data-key="${key}" data-type="weekday" value="${value}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>`;
+                if(this.ui.weekdaySettingsContainer) this.ui.weekdaySettingsContainer.innerHTML = '';
+                if(this.ui.weekendSettingsContainer) this.ui.weekendSettingsContainer.innerHTML = '';
+                
+                if(this.ui.weekdaySettingsContainer) {
+                    for (const [key, value] of Object.entries(this.state.config.weekday)) {
+                        this.ui.weekdaySettingsContainer.innerHTML += `<div><label for="setting-${key}" class="block text-sm font-medium text-gray-700">${key}</label><input type="text" id="setting-${key}" data-key="${key}" data-type="weekday" value="${value}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>`;
+                    }
                 }
-                for (const [key, value] of Object.entries(this.state.config.weekend)) {
-                    if (key !== 'DOMINGO') {
-                        this.ui.weekendSettingsContainer.innerHTML += `<div><label for="setting-${key}" class="block text-sm font-medium text-gray-700">${key.replace('-', ' ')}</label><input type="text" id="setting-${key}" data-key="${key}" data-type="weekend" value="${value}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></div>`;
+                if(this.ui.weekendSettingsContainer) {
+                    for (const [key, value] of Object.entries(this.state.config.weekend)) {
+                        if (key !== 'DOMINGO') {
+                            const groupNameValue = this.state.config.weekendGroupNames && this.state.config.weekendGroupNames[key] ? this.state.config.weekendGroupNames[key] : '';
+                            this.ui.weekendSettingsContainer.innerHTML += `
+                                <div class="border p-3 rounded bg-gray-50 mb-2">
+                                    <label for="setting-${key}" class="block text-sm font-bold text-gray-800 mb-1">${key.replace('-', ' ')}</label>
+                                    <div class="space-y-2">
+                                        <div>
+                                            <label class="block text-xs text-gray-500">Nome de Exibição (Painel):</label>
+                                            <input type="text" id="setting-${key}" data-key="${key}" data-type="weekend" value="${value}" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-500">Nome para Registro S-13:</label>
+                                            <input type="text" id="setting-groupname-${key}" data-key="${key}" data-type="weekendGroupNames" value="${groupNameValue}" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Marcio Arruda">
+                                        </div>
+                                    </div>
+                                </div>`;
+                        }
                     }
                 }
                 this.renderTerritoryManagement();
-                this.ui.settingsModal.classList.remove('hidden');
+                if(this.ui.settingsModal) this.ui.settingsModal.classList.remove('hidden');
             },
             async saveSettings(e) {
                 e.preventDefault();
                 const newConfig = { 
                     weekday: {}, 
                     // Preserva as configurações existentes do fim de semana que não são editáveis neste modal (ex: DOMINGO)
-                    weekend: { ...(this.state.config.weekend || {}) } 
+                    weekend: { ...(this.state.config.weekend || {}) },
+                    weekendGroupNames: { ...(this.state.config.weekendGroupNames || {}) }
                 };
 
                 // Seleciona apenas os inputs que pertencem à configuração de designação
-                const inputs = this.ui.settingsForm.querySelectorAll('input[type="text"][data-type]');
+                const inputs = this.ui.settingsForm ? this.ui.settingsForm.querySelectorAll('input[type="text"][data-type]') : [];
                 
                 inputs.forEach(input => {
                     const { key, type } = input.dataset;
-                    if (newConfig[type]) { // Garante que o tipo ('weekday' ou 'weekend') existe no objeto
+                    if (newConfig[type]) { // Garante que o tipo ('weekday' ou 'weekend' ou 'weekendGroupNames') existe no objeto
                         newConfig[type][key] = input.value;
                     }
                 });
@@ -875,7 +925,7 @@
                 try {
                     await setDoc(doc(db, "appState", "assignmentsConfig"), newConfig, { merge: true });
                     console.log("Configurações salvas com sucesso!");
-                    this.ui.settingsModal.classList.add('hidden');
+                    if(this.ui.settingsModal) this.ui.settingsModal.classList.add('hidden');
                 } catch (error) {
                     console.error("Erro ao salvar configurações:", error);
                     customAlert("Falha ao salvar as configurações.");
@@ -906,11 +956,11 @@
             },
             openHistoryModal() {
                 this.filterAndRenderHistory();
-                this.ui.historyModal.classList.remove('hidden');
+                if(this.ui.historyModal) this.ui.historyModal.classList.remove('hidden');
             },
             filterAndRenderHistory() {
-                const startDate = this.ui.historyStartDate.value ? new Date(this.ui.historyStartDate.value + 'T00:00:00') : null;
-                const endDate = this.ui.historyEndDate.value ? new Date(this.ui.historyEndDate.value + 'T23:59:59') : null;
+                const startDate = (this.ui.historyStartDate && this.ui.historyStartDate.value) ? new Date(this.ui.historyStartDate.value + 'T00:00:00') : null;
+                const endDate = (this.ui.historyEndDate && this.ui.historyEndDate.value) ? new Date(this.ui.historyEndDate.value + 'T23:59:59') : null;
 
                 const filteredHistory = this.state.history.filter(entry => {
                     const entryDate = entry.timestamp?.toDate();
@@ -922,6 +972,7 @@
                 this.renderHistory(filteredHistory);
             },
             renderHistory(entries = this.state.history) {
+                if (!this.ui.historyContainer) return;
                 this.ui.historyContainer.innerHTML = '';
                 if (entries.length === 0) {
                     this.ui.historyContainer.innerHTML = '<p class="text-gray-500 text-center">Nenhum histórico de designação encontrado para o período selecionado.</p>';
@@ -948,6 +999,7 @@
             },
             openLinkSettingsModal() {
                 const container = this.ui.linkSettingsContainer;
+                if(!container) return;
                 container.innerHTML = '';
                 this.data.forEach(t => {
                     const link = this.territoryLinks[t.id] || '';
@@ -958,12 +1010,12 @@
                         </div>`;
                     container.innerHTML += inputGroup;
                 });
-                this.ui.linkSettingsModal.classList.remove('hidden');
+                if(this.ui.linkSettingsModal) this.ui.linkSettingsModal.classList.remove('hidden');
             },
             async saveLinkSettings(e) {
                 e.preventDefault();
                 const newLinks = {};
-                const inputs = this.ui.linkSettingsForm.querySelectorAll('input[type="url"]');
+                const inputs = this.ui.linkSettingsForm ? this.ui.linkSettingsForm.querySelectorAll('input[type="url"]') : [];
                 inputs.forEach(input => {
                     const id = input.dataset.id;
                     if (input.value) {
@@ -973,7 +1025,7 @@
                 try {
                     await setDoc(doc(db, "appState", "territoryLinks"), { links: newLinks });
                     console.log("Links salvos com sucesso!");
-                    this.ui.linkSettingsModal.classList.add('hidden');
+                    if(this.ui.linkSettingsModal) this.ui.linkSettingsModal.classList.add('hidden');
                     customAlert("Links atualizados com sucesso!");
                 } catch (error) {
                     console.error("Erro ao salvar os links:", error);
@@ -981,55 +1033,59 @@
                 }
             },
             closeAllModals() { 
-                this.ui.statusModal.classList.add('hidden'); 
-                this.ui.selectionModal.classList.add('hidden'); 
-                this.ui.settingsModal.classList.add('hidden'); 
-                this.ui.historyModal.classList.add('hidden');
-                this.ui.linkSettingsModal.classList.add('hidden');
+                if(this.ui.statusModal) this.ui.statusModal.classList.add('hidden'); 
+                if(this.ui.selectionModal) this.ui.selectionModal.classList.add('hidden'); 
+                if(this.ui.settingsModal) this.ui.settingsModal.classList.add('hidden'); 
+                if(this.ui.historyModal) this.ui.historyModal.classList.add('hidden');
+                if(this.ui.linkSettingsModal) this.ui.linkSettingsModal.classList.add('hidden');
             },
             setupWeekPicker() {
                 const today = new Date();
-                this.ui.weekPicker.value = today.toISOString().split('T')[0];
-                const parts = this.ui.weekPicker.value.split('-').map(Number);
-                this.state.selectedDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-                
-                this.ui.weekPicker.addEventListener('change', (e) => {
-                    const parts = e.target.value.split('-').map(Number);
+                if(this.ui.weekPicker) {
+                    this.ui.weekPicker.value = today.toISOString().split('T')[0];
+                    const parts = this.ui.weekPicker.value.split('-').map(Number);
                     this.state.selectedDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-                    this.updateDateDisplay();
-                    this.renderAssignmentCards();
-                });
+                    
+                    this.ui.weekPicker.addEventListener('change', (e) => {
+                        const parts = e.target.value.split('-').map(Number);
+                        this.state.selectedDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+                        this.updateDateDisplay();
+                        this.renderAssignmentCards();
+                    });
+                }
             },
             setupEventListeners() {
-                this.ui.modeWeekdayBtn.addEventListener('click', () => this.setMode('weekday'));
-                this.ui.modeWeekendBtn.addEventListener('click', () => this.setMode('weekend'));
+                if(this.ui.modeWeekdayBtn) this.ui.modeWeekdayBtn.addEventListener('click', () => this.setMode('weekday'));
+                if(this.ui.modeWeekendBtn) this.ui.modeWeekendBtn.addEventListener('click', () => this.setMode('weekend'));
                 
                 // Event Listeners for Modals
-                this.ui.openSettingsBtn.addEventListener('click', () => this.openSettingsModal());
-                this.ui.closeSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
-                this.ui.cancelSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
-                this.ui.settingsForm.addEventListener('submit', (e) => this.saveSettings(e));
+                if(this.ui.openSettingsBtn) this.ui.openSettingsBtn.addEventListener('click', () => this.openSettingsModal());
+                if(this.ui.closeSettingsBtn) this.ui.closeSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
+                if(this.ui.cancelSettingsBtn) this.ui.cancelSettingsBtn.addEventListener('click', () => this.ui.settingsModal.classList.add('hidden'));
+                if(this.ui.settingsForm) this.ui.settingsForm.addEventListener('submit', (e) => this.saveSettings(e));
                 
-                this.ui.openLinkSettingsBtn.addEventListener('click', () => this.openLinkSettingsModal());
-                this.ui.closeLinkSettingsBtn.addEventListener('click', () => this.ui.linkSettingsModal.classList.add('hidden'));
-                this.ui.cancelLinkSettingsBtn.addEventListener('click', () => this.ui.linkSettingsModal.classList.add('hidden'));
-                this.ui.linkSettingsForm.addEventListener('submit', (e) => this.saveLinkSettings(e));
+                if(this.ui.openLinkSettingsBtn) this.ui.openLinkSettingsBtn.addEventListener('click', () => this.openLinkSettingsModal());
+                if(this.ui.closeLinkSettingsBtn) this.ui.closeLinkSettingsBtn.addEventListener('click', () => this.ui.linkSettingsModal.classList.add('hidden'));
+                if(this.ui.cancelLinkSettingsBtn) this.ui.cancelLinkSettingsBtn.addEventListener('click', () => this.ui.linkSettingsModal.classList.add('hidden'));
+                if(this.ui.linkSettingsForm) this.ui.linkSettingsForm.addEventListener('submit', (e) => this.saveLinkSettings(e));
 
-                this.ui.openHistoryBtn.addEventListener('click', () => this.openHistoryModal());
-                this.ui.closeHistoryBtn.addEventListener('click', () => this.ui.historyModal.classList.add('hidden'));
+                if(this.ui.openHistoryBtn) this.ui.openHistoryBtn.addEventListener('click', () => this.openHistoryModal());
+                if(this.ui.closeHistoryBtn) this.ui.closeHistoryBtn.addEventListener('click', () => this.ui.historyModal.classList.add('hidden'));
                 
-                this.ui.filterHistoryBtn.addEventListener('click', () => this.filterAndRenderHistory());
-                this.ui.clearHistoryFilterBtn.addEventListener('click', () => {
-                    this.ui.historyStartDate.value = '';
-                    this.ui.historyEndDate.value = '';
+                if(this.ui.filterHistoryBtn) this.ui.filterHistoryBtn.addEventListener('click', () => this.filterAndRenderHistory());
+                if(this.ui.clearHistoryFilterBtn) this.ui.clearHistoryFilterBtn.addEventListener('click', () => {
+                    if(this.ui.historyStartDate) this.ui.historyStartDate.value = '';
+                    if(this.ui.historyEndDate) this.ui.historyEndDate.value = '';
                     this.filterAndRenderHistory();
                 });
-                this.ui.historyContainer.addEventListener('click', (e) => {
+                if(this.ui.historyContainer) this.ui.historyContainer.addEventListener('click', (e) => {
                     if (e.target.classList.contains('toggle-history-message')) {
                         const targetId = e.target.dataset.target;
                         const messageEl = document.getElementById(targetId);
-                        const isHidden = messageEl.classList.toggle('hidden');
-                        e.target.textContent = isHidden ? 'Ver Mensagem' : 'Ocultar Mensagem';
+                        if(messageEl) {
+                            const isHidden = messageEl.classList.toggle('hidden');
+                            e.target.textContent = isHidden ? 'Ver Mensagem' : 'Ocultar Mensagem';
+                        }
                     }
                 });
 
@@ -1042,23 +1098,31 @@
                         }
                         else if (e.target.classList.contains('archive-btn')) { 
                             const isPersonal = this.state.personalAssignments[id];
-                            if (isPersonal) {
-                                // É pessoal, apenas arquiva sem S-13
-                                if (!this.state.archived.includes(id)) {
-                                    this.state.archived.push(id);
-                                }
-                                await this.saveState(); 
-                                console.log(`Território pessoal ${id} arquivado.`);
-                            } else {
-                                // Lógica original: dispara S-13
-                                const success = await this.triggerS13Update(id);
-                                if (success) {
-                                    if (!this.state.archived.includes(id)) {
-                                        this.state.archived.push(id);
+                            
+                            // Adicionada confirmação de arquivamento
+                            mainNav.showConfirmationModal(
+                                'Arquivar e Registrar',
+                                'Tem certeza que deseja arquivar este território? Se houver uma designação S-13 pendente, ela será registrada agora.',
+                                async () => {
+                                    if (isPersonal) {
+                                        // É pessoal, apenas arquiva sem S-13
+                                        if (!this.state.archived.includes(id)) {
+                                            this.state.archived.push(id);
+                                        }
+                                        await this.saveState(); 
+                                        console.log(`Território pessoal ${id} arquivado.`);
+                                    } else {
+                                        // Lógica original: dispara S-13
+                                        const success = await this.triggerS13Update(id);
+                                        if (success) {
+                                            if (!this.state.archived.includes(id)) {
+                                                this.state.archived.push(id);
+                                            }
+                                            await this.saveState(); 
+                                        }
                                     }
-                                    await this.saveState(); 
                                 }
-                            }
+                            );
                         }
                         else if (e.target.classList.contains('restore-btn')) { 
                             this.state.archived = this.state.archived.filter(i => i !== id); 
@@ -1076,121 +1140,140 @@
                     }
                 });
 
-                this.ui.settingsModal.addEventListener('click', (e) => {
-                    if (e.target.id === 'add-territory-btn') {
-                        const idInput = document.getElementById('new-territory-id');
-                        const blocksInput = document.getElementById('new-territory-blocks');
-                        const id = parseInt(idInput.value);
-                        const blocks = blocksInput.value.split(',').map(b => b.trim().toUpperCase()).filter(b => b);
+                if(this.ui.settingsModal) {
+                    this.ui.settingsModal.addEventListener('click', (e) => {
+                        if (e.target.id === 'add-territory-btn') {
+                            const idInput = document.getElementById('new-territory-id');
+                            const blocksInput = document.getElementById('new-territory-blocks');
+                            if(!idInput || !blocksInput) return;
+                            const id = parseInt(idInput.value);
+                            const blocks = blocksInput.value.split(',').map(b => b.trim().toUpperCase()).filter(b => b);
 
-                        if (!id || blocks.length === 0) {
-                            customAlert("Por favor, preencha o número do território e as quadras.");
-                            return;
-                        }
-                        if (this.data.some(t => t.id === id)) {
-                            customAlert(`O território ${id} já existe.`);
-                            return;
-                        }
-
-                        this.data.push({ id, blocks });
-                        this.data.sort((a, b) => a.id - b.id);
-                        this.saveTerritories(); // Isso aciona o snapshot e re-renderiza a UI
-                        idInput.value = '';
-                        blocksInput.value = '';
-                    }
-
-                    if (e.target.classList.contains('delete-territory-btn')) {
-                        const id = parseInt(e.target.closest('.delete-territory-btn').dataset.id);
-                        mainNav.showConfirmationModal(
-                            'Remover Território',
-                            `Tem certeza que deseja remover o território ${id}? Esta ação não pode ser desfeita.`,
-                            () => {
-                                this.data = this.data.filter(t => t.id !== id);
-                                // NOVO: Também remove de designações pessoais se existir
-                                if (this.state.personalAssignments[id]) {
-                                    delete this.state.personalAssignments[id];
-                                    this.saveState(); // Salva a remoção do personalAssignments
-                                }
-                                this.saveTerritories(); // Salva a lista de territórios atualizada
+                            if (!id || blocks.length === 0) {
+                                customAlert("Por favor, preencha o número do território e as quadras.");
+                                return;
                             }
-                        );
-                    }
-                });
+                            if (this.data.some(t => t.id === id)) {
+                                customAlert(`O território ${id} já existe.`);
+                                return;
+                            }
+
+                            this.data.push({ id, blocks });
+                            this.data.sort((a, b) => a.id - b.id);
+                            this.saveTerritories(); // Isso aciona o snapshot e re-renderiza a UI
+                            idInput.value = '';
+                            blocksInput.value = '';
+                        }
+
+                        if (e.target.classList.contains('delete-territory-btn')) {
+                            const id = parseInt(e.target.closest('.delete-territory-btn').dataset.id);
+                            mainNav.showConfirmationModal(
+                                'Remover Território',
+                                `Tem certeza que deseja remover o território ${id}? Esta ação não pode ser desfeita.`,
+                                () => {
+                                    this.data = this.data.filter(t => t.id !== id);
+                                    // NOVO: Também remove de designações pessoais se existir
+                                    if (this.state.personalAssignments[id]) {
+                                        delete this.state.personalAssignments[id];
+                                        this.saveState(); // Salva a remoção do personalAssignments
+                                    }
+                                    this.saveTerritories(); // Salva a lista de territórios atualizada
+                                }
+                            );
+                        }
+                    });
+                }
 
                 document.body.addEventListener('input', (e) => { if (e.target.id === 'sunday-name-select') { this.state.weekendSelections.DOMINGO.name = e.target.value; this.saveState(); } });
                 
-                this.ui.toggleArchivedBtn.addEventListener('click', () => {
-                    this.state.showArchived = !this.state.showArchived;
-                    this.ui.toggleArchivedBtn.textContent = this.state.showArchived ? 'Mostrar Ativos' : 'Mostrar Arquivados';
-                    this.ui.gridTitle.textContent = this.state.showArchived ? 'Territórios Arquivados' : 'Territórios Ativos';
-                    this.renderGrid();
-                });
+                if(this.ui.toggleArchivedBtn) {
+                    this.ui.toggleArchivedBtn.addEventListener('click', () => {
+                        this.state.showArchived = !this.state.showArchived;
+                        this.ui.toggleArchivedBtn.textContent = this.state.showArchived ? 'Mostrar Ativos' : 'Mostrar Arquivados';
+                        this.ui.gridTitle.textContent = this.state.showArchived ? 'Territórios Arquivados' : 'Territórios Ativos';
+                        this.renderGrid();
+                    });
+                }
 
                 // Listener de EVENTOS para o modal de STATUS (Quadras + Pessoal)
-                this.ui.statusModal.addEventListener('click', async (e) => {
-                    const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
-                    if (!id) return;
+                if(this.ui.statusModal) {
+                    this.ui.statusModal.addEventListener('click', async (e) => {
+                        const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
+                        if (!id) return;
 
-                    // Botão Salvar Designação Pessoal
-                    if (e.target.id === 'save-personal-btn') {
-                        const select = this.ui.statusModal.querySelector('#personal-assignment-select');
-                        const name = select.value;
-                        if (name) {
-                            this.state.personalAssignments[id] = name;
-                            await this.saveState();
-                            customAlert(`Território ${id} salvo para ${name}.`);
-                            this.closeAllModals();
-                        } else {
-                            customAlert("Por favor, selecione um nome para salvar.");
+                        // Botão Salvar Designação Pessoal
+                        if (e.target.id === 'save-personal-btn') {
+                            const select = this.ui.statusModal.querySelector('#personal-assignment-select');
+                            const name = select ? select.value : null;
+                            if (name) {
+                                this.state.personalAssignments[id] = name;
+                                await this.saveState();
+                                customAlert(`Território ${id} salvo para ${name}.`);
+                                this.closeAllModals();
+                            } else {
+                                customAlert("Por favor, selecione um nome para salvar.");
+                            }
                         }
-                    }
 
-                    // Botão Remover Designação Pessoal
-                    if (e.target.id === 'remove-personal-btn') {
-                        if (this.state.personalAssignments[id]) {
-                            delete this.state.personalAssignments[id];
-                            await this.saveState();
-                            customAlert(`Designação pessoal removida do Território ${id}.`);
-                            this.closeAllModals();
-                        } else {
-                            customAlert("Este território não possui designação pessoal.");
+                        // Botão Remover Designação Pessoal
+                        if (e.target.id === 'remove-personal-btn') {
+                            if (this.state.personalAssignments[id]) {
+                                delete this.state.personalAssignments[id];
+                                await this.saveState();
+                                customAlert(`Designação pessoal removida do Território ${id}.`);
+                                this.closeAllModals();
+                            } else {
+                                customAlert("Este território não possui designação pessoal.");
+                            }
                         }
-                    }
 
-                    // Botão Fechar (Salvar Status)
-                    if (e.target.id === 'save-status-btn') {
-                        this.closeAllModals();
-                        this.renderGrid(); // Re-renderiza a grade para mostrar o status atualizado
-                    }
-                });
-                
-                // Listener de MUDANÇAS para as checkboxes no modal de status
-                this.ui.statusModal.addEventListener('change', (e) => {
-                    const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
-                    if (!id) return;
+                        // Botão Fechar (Salvar Status)
+                        if (e.target.id === 'save-status-btn') {
+                            this.closeAllModals();
+                            this.renderGrid(); // Re-renderiza a grade para mostrar o status atualizado
+                        }
+                    });
+                    
+                    // Listener de MUDANÇAS para as checkboxes no modal de status
+                    this.ui.statusModal.addEventListener('change', (e) => {
+                        const id = parseInt(this.ui.statusModal.dataset.currentTerritoryId);
+                        if (!id) return;
 
-                    if (e.target.classList.contains('block-checkbox') || e.target.id === 'select-all-blocks') {
-                        if (!this.state.status[id]) this.state.status[id] = {};
-                        const cbs = this.ui.statusModal.querySelectorAll('.block-checkbox');
-                        if (e.target.id === 'select-all-blocks') { cbs.forEach(cb => { cb.checked = e.target.checked; this.state.status[id][cb.dataset.block] = e.target.checked; }); }
-                        else { this.state.status[id][e.target.dataset.block] = e.target.checked; this.ui.statusModal.querySelector('#select-all-blocks').checked = Array.from(cbs).every(cb => cb.checked); }
-                        this.saveState();
-                    }
-                });
+                        if (e.target.classList.contains('block-checkbox') || e.target.id === 'select-all-blocks') {
+                            if (!this.state.status[id]) this.state.status[id] = {};
+                            const cbs = this.ui.statusModal.querySelectorAll('.block-checkbox');
+                            if (e.target.id === 'select-all-blocks') { cbs.forEach(cb => { cb.checked = e.target.checked; this.state.status[id][cb.dataset.block] = e.target.checked; }); }
+                            else { this.state.status[id][e.target.dataset.block] = e.target.checked; this.ui.statusModal.querySelector('#select-all-blocks').checked = Array.from(cbs).every(cb => cb.checked); }
+                            this.saveState();
+                        }
+                    });
+                }
 
-                this.ui.selectionModal.querySelector('#confirm-selection-btn').addEventListener('click', () => {
-                    const key = this.ui.selectionModal.dataset.currentKey;
-                    const ids = Array.from(this.ui.selectionModal.querySelectorAll('input:checked')).map(cb => isNaN(parseInt(cb.value)) ? cb.value : parseInt(cb.value));
-                    if (this.state.mode === 'weekday') this.state.weekdaySelections[key] = ids;
-                    else if (key === 'DOMINGO') this.state.weekendSelections[key].territories = ids;
-                    else this.state.weekendSelections[key] = ids;
-                    this.saveState(); this.closeAllModals();
-                });
-                this.ui.generateMessageBtn.addEventListener('click', () => this.generateMessage());
-                this.ui.copyMessageBtn.addEventListener('click', () => {
-                    this.ui.whatsappMessage.select(); document.execCommand('copy');
-                    this.ui.copySuccess.classList.remove('hidden'); setTimeout(() => this.ui.copySuccess.classList.add('hidden'), 2000);
-                });
+                if(this.ui.selectionModal) {
+                    const confirmBtn = this.ui.selectionModal.querySelector('#confirm-selection-btn');
+                    if(confirmBtn) {
+                        confirmBtn.addEventListener('click', () => {
+                            const key = this.ui.selectionModal.dataset.currentKey;
+                            const ids = Array.from(this.ui.selectionModal.querySelectorAll('input:checked')).map(cb => isNaN(parseInt(cb.value)) ? cb.value : parseInt(cb.value));
+                            if (this.state.mode === 'weekday') this.state.weekdaySelections[key] = ids;
+                            else if (key === 'DOMINGO') this.state.weekendSelections[key].territories = ids;
+                            else this.state.weekendSelections[key] = ids;
+                            this.saveState(); this.closeAllModals();
+                        });
+                    }
+                }
+                if(this.ui.generateMessageBtn) this.ui.generateMessageBtn.addEventListener('click', () => this.generateMessage());
+                if(this.ui.copyMessageBtn) {
+                    this.ui.copyMessageBtn.addEventListener('click', () => {
+                        if(this.ui.whatsappMessage) {
+                            this.ui.whatsappMessage.select(); document.execCommand('copy');
+                            if(this.ui.copySuccess) {
+                                this.ui.copySuccess.classList.remove('hidden'); 
+                                setTimeout(() => this.ui.copySuccess.classList.add('hidden'), 2000);
+                            }
+                        }
+                    });
+                }
                 [this.ui.statusModal, this.ui.selectionModal, this.ui.settingsModal, this.ui.historyModal, this.ui.linkSettingsModal].forEach(m => {
                     if(m) {
                         m.addEventListener('click', (e) => { if (e.target === m) this.closeAllModals(); });
@@ -1198,24 +1281,29 @@
                         if(closeBtn) closeBtn.addEventListener('click', () => this.closeAllModals());
                     }
                 });
-                // this.ui.statusModal.querySelector('#save-status-btn').addEventListener('click', () => { this.closeAllModals(); this.renderGrid(); }); // Movido para listener de click separado
                 
-                this.ui.resetArchivedBtn.addEventListener('click', () => mainNav.showConfirmationModal(
-                    'Zerar/Restaurar Arquivados', 
-                    'Tem certeza que deseja zerar o progresso e restaurar TODOS os territórios arquivados? O progresso dos territórios ativos não será alterado.', 
-                    () => this.resetArchivedTerritories()
-                ));
+                if(this.ui.resetArchivedBtn) {
+                    this.ui.resetArchivedBtn.addEventListener('click', () => mainNav.showConfirmationModal(
+                        'Zerar/Restaurar Arquivados', 
+                        'Tem certeza que deseja zerar o progresso e restaurar TODOS os territórios arquivados? O progresso dos territórios ativos não será alterado.', 
+                        () => this.resetArchivedTerritories()
+                    ));
+                }
 
-                this.ui.resetTerritoriesBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Territórios', 'Tem certeza que deseja zerar todos os territórios? Esta ação irá restaurar os arquivados e marcar todas as quadras como pendentes (exceto territórios com designação pessoal).', () => this.resetTerritories()));
+                if(this.ui.resetTerritoriesBtn) {
+                    this.ui.resetTerritoriesBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Territórios', 'Tem certeza que deseja zerar todos os territórios? Esta ação irá restaurar os arquivados e marcar todas as quadras como pendentes (exceto territórios com designação pessoal).', () => this.resetTerritories()));
+                }
                 
-                this.ui.clearAssignmentsBtn.addEventListener('click', () => {
-                    const modeText = this.state.mode === 'weekday' ? 'dos dias de semana' : 'do final de semana';
-                    mainNav.showConfirmationModal(
-                        'Limpar Designações',
-                        `Tem certeza que deseja limpar todas as designações ${modeText}?`,
-                        () => this.clearAssignments()
-                    );
-                });
+                if(this.ui.clearAssignmentsBtn) {
+                    this.ui.clearAssignmentsBtn.addEventListener('click', () => {
+                        const modeText = this.state.mode === 'weekday' ? 'dos dias de semana' : 'do final de semana';
+                        mainNav.showConfirmationModal(
+                            'Limpar Designações',
+                            `Tem certeza que deseja limpar todas as designações ${modeText}?`,
+                            () => this.clearAssignments()
+                        );
+                    });
+                }
             },
 
             async resetArchivedTerritories() {
@@ -1419,10 +1507,10 @@
                         console.error("Erro ao salvar no histórico:", error);
                     }
                 }
-                this.ui.whatsappMessage.value = message;
+                if(this.ui.whatsappMessage) this.ui.whatsappMessage.value = message;
                 const encodedMessage = encodeURIComponent(message);
-                this.ui.sendWhatsappLink.href = `https://wa.me/?text=${encodedMessage}`;
-                this.ui.messageOutputContainer.classList.remove('hidden');
+                if(this.ui.sendWhatsappLink) this.ui.sendWhatsappLink.href = `https://wa.me/?text=${encodedMessage}`;
+                if(this.ui.messageOutputContainer) this.ui.messageOutputContainer.classList.remove('hidden');
             }
         };
 
@@ -1439,7 +1527,7 @@
                 dataInicioInput: document.getElementById('s13-data-inicio'),
                 dataConclusaoInput: document.getElementById('s13-data-conclusao'),
                 planilhaCorpo: document.getElementById('s13-planilha-corpo'),
-                baixarBtn: document.getElementById('s13-baixar-excel'),
+                baixarBtn: document.getElementById('s13-baixar-pdf'),
                 openModalBtn: document.getElementById('open-names-modal-btn'),
                 namesModal: document.getElementById('s13-names-modal'),
                 closeModalBtn: document.getElementById('s13-close-modal-btn'),
@@ -1485,6 +1573,7 @@
                 }
             },
             renderNames() {
+                if(!this.ui.nomeSelect || !this.ui.listaPublicadores) return;
                 this.ui.nomeSelect.innerHTML = '<option value="">Selecione um nome</option>';
                 this.ui.listaPublicadores.innerHTML = '';
                 this.state.publicadores.forEach((nome, index) => {
@@ -1498,10 +1587,10 @@
             },
             addName(e) {
                 e.preventDefault();
-                const novoNome = this.ui.novoNomeInput.value.trim();
+                const novoNome = this.ui.novoNomeInput ? this.ui.novoNomeInput.value.trim() : '';
                 if (novoNome && !this.state.publicadores.includes(novoNome)) {
                     this.state.publicadores.push(novoNome); this.state.publicadores.sort();
-                    this.saveState(); this.ui.novoNomeInput.value = '';
+                    this.saveState(); if(this.ui.novoNomeInput) this.ui.novoNomeInput.value = '';
                 } else if (this.state.publicadores.includes(novoNome)) { customAlert('Este nome já está cadastrado.'); }
             },
             deleteName(e) {
@@ -1527,13 +1616,15 @@
             },
             renderPagination() {
                 const maxPages = this.getMaxPages();
-                this.ui.paginationControls.innerHTML = '';
-                if (maxPages <= 1) return;
-                this.ui.paginationControls.innerHTML = `
-                    <button id="s13-prev-page" class="px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50" ${this.state.currentPage === 0 ? 'disabled' : ''}>Anterior</button>
-                    <span class="font-semibold">Página ${this.state.currentPage + 1} de ${maxPages}</span>
-                    <button id="s13-next-page" class="px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50" ${this.state.currentPage >= maxPages - 1 ? 'disabled' : ''}>Próxima</button>
-                `;
+                if(this.ui.paginationControls) {
+                    this.ui.paginationControls.innerHTML = '';
+                    if (maxPages <= 1) return;
+                    this.ui.paginationControls.innerHTML = `
+                        <button id="s13-prev-page" class="px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50" ${this.state.currentPage === 0 ? 'disabled' : ''}>Anterior</button>
+                        <span class="font-semibold">Página ${this.state.currentPage + 1} de ${maxPages}</span>
+                        <button id="s13-next-page" class="px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50" ${this.state.currentPage >= maxPages - 1 ? 'disabled' : ''}>Próxima</button>
+                    `;
+                }
             },
             renderTable(pageIndex = 0) {
                 this.state.currentPage = pageIndex;
@@ -1566,7 +1657,7 @@
                        }, 0);
                     }
                 }
-                this.ui.planilhaCorpo.innerHTML = html;
+                if(this.ui.planilhaCorpo) this.ui.planilhaCorpo.innerHTML = html;
                 this.renderPagination();
             },
             formatDate(dataStr) { if (!dataStr) return ''; const [y, m, d] = dataStr.split('T')[0].split('-'); return `${d}/${m}/${y.slice(-2)}`; },
@@ -1616,40 +1707,107 @@
                 await this._addRecord(num, nome, start, end);
                 this.ui.form.reset(); this.ui.addRecordModal.classList.add('hidden');
             },
-            async exportToExcel() {
+            async exportToPDF() {
+                const element = document.createElement('div');
+                element.style.width = '100%';
+                // Estilos para o PDF (para garantir que bordas apareçam)
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    .pdf-page { margin-bottom: 20px; page-break-after: always; padding: 20px; }
+                    .pdf-page:last-child { page-break-after: avoid; }
+                    .pdf-table { width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif; font-size: 10px; }
+                    .pdf-table th, .pdf-table td { border: 1px solid #000; padding: 4px; text-align: center; }
+                    .pdf-table th { background-color: #f3f4f6; font-weight: bold; }
+                    .pdf-header { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #374151; }
+                    .pdf-sub { text-align: center; font-size: 12px; margin-bottom: 15px; color: #4b5563; }
+                `;
+                element.appendChild(style);
+
                 const maxPages = this.getMaxPages();
-                const workbook = XLSX.utils.book_new();
-                const originalPage = this.state.currentPage;
-                for (let i = 0; i < maxPages; i++) {
-                    this.renderTable(i);
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    const tableClone = document.getElementById('s13-planilha').cloneNode(true);
-                    const worksheet = XLSX.utils.table_to_sheet(tableClone);
-                    XLSX.utils.book_append_sheet(workbook, worksheet, `Planilha ${i + 1}`);
+                
+                for (let page = 0; page < maxPages; page++) {
+                    const pageContainer = document.createElement('div');
+                    pageContainer.className = 'pdf-page';
+                    
+                    const header = `<div class="pdf-header">Registro de Território S-13</div><div class="pdf-sub">Ano de Serviço 2025 - Página ${page + 1}</div>`;
+                    
+                    let tableHTML = `
+                    <table class="pdf-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width: 40px;">Terr. n.º</th><th rowspan="2" style="width: 60px;">Última data concluída</th>
+                                <th colspan="2">Designado para</th><th colspan="2">Designado para</th>
+                                <th colspan="2">Designado para</th><th colspan="2">Designado para</th>
+                            </tr>
+                            <tr>
+                                <th>Data da desig.</th><th>Data da conclusão</th><th>Data da desig.</th><th>Data da conclusão</th>
+                                <th>Data da desig.</th><th>Data da conclusão</th><th>Data da desig.</th><th>Data da conclusão</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                    for (let i = 1; i <= this.config.numTerritories; i++) {
+                        const allRecords = this.state.s13Data[i] || [];
+                        const startIndex = page * this.config.numDesignations;
+                        const pageData = allRecords.slice(startIndex, startIndex + this.config.numDesignations);
+                        
+                        const lastRecord = allRecords.length > 0 ? allRecords[allRecords.length - 1] : null;
+                        const lastDate = lastRecord ? this.formatDate(lastRecord.end) : '';
+
+                        // Row 1: Names
+                        tableHTML += `<tr><td rowspan="2">${i}</td><td rowspan="2">${lastDate}</td>`;
+                        for (let j = 0; j < this.config.numDesignations; j++) {
+                            const record = pageData[j];
+                            tableHTML += `<td colspan="2" style="font-weight: 500;">${record ? record.name : ''}</td>`;
+                        }
+                        tableHTML += `</tr>`;
+
+                        // Row 2: Dates
+                        tableHTML += `<tr>`;
+                        for (let j = 0; j < this.config.numDesignations; j++) {
+                            const record = pageData[j];
+                            tableHTML += `<td>${record ? this.formatDate(record.start) : ''}</td><td>${record ? this.formatDate(record.end) : ''}</td>`;
+                        }
+                        tableHTML += `</tr>`;
+                    }
+
+                    tableHTML += `</tbody></table>`;
+                    pageContainer.innerHTML = header + tableHTML;
+                    element.appendChild(pageContainer);
                 }
-                this.renderTable(originalPage);
-                XLSX.writeFile(workbook, "REGISTRO_DE_TERRITORIO_S13.xlsx");
+
+                const opt = {
+                    margin: 10,
+                    filename: 'registro_s13.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                };
+
+                html2pdf().set(opt).from(element).save();
             },
             async resetS13Data() {
                 // Para zerar, usamos set para sobrescrever o documento com um objeto vazio.
                 await setDoc(doc(db, "appState", "s13Data"), { data: {} });
             },
             setupEventListeners() {
-                this.ui.form.addEventListener('submit', (e) => this.addRecordFromModal(e));
-                this.ui.addNameForm.addEventListener('submit', (e) => this.addName(e));
-                this.ui.listaPublicadores.addEventListener('click', (e) => this.deleteName(e));
-                this.ui.baixarBtn.addEventListener('click', () => this.exportToExcel());
-                this.ui.openModalBtn.addEventListener('click', () => this.ui.namesModal.classList.remove('hidden'));
-                this.ui.closeModalBtn.addEventListener('click', () => this.ui.namesModal.classList.add('hidden'));
-                this.ui.namesModal.addEventListener('click', (e) => { if (e.target === this.ui.namesModal) this.ui.namesModal.classList.add('hidden'); });
-                this.ui.openAddRecordModalBtn.addEventListener('click', () => this.ui.addRecordModal.classList.remove('hidden'));
-                this.ui.closeAddRecordModalBtn.addEventListener('click', () => this.ui.addRecordModal.classList.add('hidden'));
-                this.ui.addRecordModal.addEventListener('click', (e) => { if (e.target === this.ui.addRecordModal) this.ui.addRecordModal.classList.add('hidden'); });
-                this.ui.resetBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Planilha S-13', 'Tem certeza que deseja apagar todos os dados da planilha S-13? Esta ação não pode ser desfeita.', () => this.resetS13Data()));
-                this.ui.paginationControls.addEventListener('click', (e) => {
-                    if (e.target.id === 's13-prev-page') this.renderTable(this.state.currentPage - 1);
-                    else if (e.target.id === 's13-next-page') this.renderTable(this.state.currentPage + 1);
-                });
+                if(this.ui.form) this.ui.form.addEventListener('submit', (e) => this.addRecordFromModal(e));
+                if(this.ui.addNameForm) this.ui.addNameForm.addEventListener('submit', (e) => this.addName(e));
+                if(this.ui.listaPublicadores) this.ui.listaPublicadores.addEventListener('click', (e) => this.deleteName(e));
+                if(this.ui.baixarBtn) this.ui.baixarBtn.addEventListener('click', () => this.exportToPDF());
+                if(this.ui.openModalBtn) this.ui.openModalBtn.addEventListener('click', () => this.ui.namesModal.classList.remove('hidden'));
+                if(this.ui.closeModalBtn) this.ui.closeModalBtn.addEventListener('click', () => this.ui.namesModal.classList.add('hidden'));
+                if(this.ui.namesModal) this.ui.namesModal.addEventListener('click', (e) => { if (e.target === this.ui.namesModal) this.ui.namesModal.classList.add('hidden'); });
+                if(this.ui.openAddRecordModalBtn) this.ui.openAddRecordModalBtn.addEventListener('click', () => this.ui.addRecordModal.classList.remove('hidden'));
+                if(this.ui.closeAddRecordModalBtn) this.ui.closeAddRecordModalBtn.addEventListener('click', () => this.ui.addRecordModal.classList.add('hidden'));
+                if(this.ui.addRecordModal) this.ui.addRecordModal.addEventListener('click', (e) => { if (e.target === this.ui.addRecordModal) this.ui.addRecordModal.classList.add('hidden'); });
+                if(this.ui.resetBtn) this.ui.resetBtn.addEventListener('click', () => mainNav.showConfirmationModal('Zerar Planilha S-13', 'Tem certeza que deseja apagar todos os dados da planilha S-13? Esta ação não pode ser desfeita.', () => this.resetS13Data()));
+                if(this.ui.paginationControls) {
+                    this.ui.paginationControls.addEventListener('click', (e) => {
+                        if (e.target.id === 's13-prev-page') this.renderTable(this.state.currentPage - 1);
+                        else if (e.target.id === 's13-next-page') this.renderTable(this.state.currentPage + 1);
+                    });
+                }
             }
         };
 
@@ -1672,7 +1830,7 @@
                     territoryManager.renderAssignmentCards();
                     // NOVO: Atualiza o select de pessoal se o modal de status estiver aberto
                     const statusModal = document.getElementById('status-modal');
-                    if (!statusModal.classList.contains('hidden')) {
+                    if (statusModal && !statusModal.classList.contains('hidden')) {
                         const id = parseInt(statusModal.dataset.currentTerritoryId);
                         if(id) territoryManager.openStatusModal(id);
                     }
@@ -1680,35 +1838,42 @@
             },
             showView(viewName) {
                 if (viewName === 's13') {
-                    this.mainView.classList.add('hidden');
-                    this.s13View.classList.remove('hidden');
-                    this.navButton.textContent = 'Voltar ao Painel';
-                    this.navTitle.textContent = 'Registro S-13';
+                    if(this.mainView) this.mainView.classList.add('hidden');
+                    if(this.s13View) this.s13View.classList.remove('hidden');
+                    if(this.navButton) this.navButton.textContent = 'Voltar ao Painel';
+                    if(this.navTitle) this.navTitle.textContent = 'Registro S-13';
                     this.currentView = 's13';
                     s13App.renderTable(s13App.state.currentPage);
                 } else {
-                    this.s13View.classList.add('hidden');
-                    this.mainView.classList.remove('hidden');
-                    this.navButton.textContent = 'S-13';
-                    this.navTitle.textContent = 'Painel Principal';
+                    if(this.s13View) this.s13View.classList.add('hidden');
+                    if(this.mainView) this.mainView.classList.remove('hidden');
+                    if(this.navButton) this.navButton.textContent = 'S-13';
+                    if(this.navTitle) this.navTitle.textContent = 'Painel Principal';
                     this.currentView = 'main';
                 }
             },
             showConfirmationModal(title, message, onConfirm) {
-                this.confirmationModal.querySelector('#confirmation-title').textContent = title;
-                this.confirmationModal.querySelector('#confirmation-message').textContent = message;
+                if(!this.confirmationModal) return;
+                const t = this.confirmationModal.querySelector('#confirmation-title');
+                const m = this.confirmationModal.querySelector('#confirmation-message');
+                if(t) t.textContent = title;
+                if(m) m.textContent = message;
                 this.onConfirmCallback = onConfirm;
                 this.confirmationModal.classList.remove('hidden');
             },
             setupEventListeners() {
-                this.navButton.addEventListener('click', () => {
-                    this.showView(this.currentView === 'main' ? 's13' : 'main');
-                });
-                this.cancelBtn.addEventListener('click', () => this.confirmationModal.classList.add('hidden'));
-                this.confirmBtn.addEventListener('click', () => {
-                    if (this.onConfirmCallback) this.onConfirmCallback();
-                    this.confirmationModal.classList.add('hidden');
-                });
+                if(this.navButton) {
+                    this.navButton.addEventListener('click', () => {
+                        this.showView(this.currentView === 'main' ? 's13' : 'main');
+                    });
+                }
+                if(this.cancelBtn) this.cancelBtn.addEventListener('click', () => this.confirmationModal.classList.add('hidden'));
+                if(this.confirmBtn) {
+                    this.confirmBtn.addEventListener('click', () => {
+                        if (this.onConfirmCallback) this.onConfirmCallback();
+                        this.confirmationModal.classList.add('hidden');
+                    });
+                }
             }
         };
 
