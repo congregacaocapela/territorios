@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    match /territories/{territoryId} {
+      // O portal público usa autenticação anônima do Firebase.
+      allow read: if request.auth != null;
+
+      // Visitantes autenticados só podem atualizar o mapa de status das casas.
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+
+      // Cadastro, edição estrutural e exclusão ficam restritos ao administrador.
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin();
+    }
+  }
+}
