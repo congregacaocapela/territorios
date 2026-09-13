@@ -20,6 +20,16 @@ const controlConfig = {
   appId: import.meta.env.VITE_CONTROL_APP_ID,
 }
 
+function validateConfig(label: string, config: Record<string, unknown>) {
+  const missing = Object.entries(config).filter(([, value]) => !value).map(([key]) => key)
+  if (missing.length) {
+    throw new Error(`Configuração do Firebase (${label}) incompleta: ${missing.join(', ')}.`)
+  }
+}
+
+validateConfig('territórios', territoriesConfig)
+validateConfig('painel', controlConfig)
+
 const territoriesApp = getApps().find((app) => app.name === 'territories-v2') ?? initializeApp(territoriesConfig, 'territories-v2')
 const controlApp = getApps().find((app) => app.name === 'control-v2') ?? initializeApp(controlConfig, 'control-v2')
 
@@ -46,4 +56,3 @@ export function ensureTerritoriesSession() {
 export function getNamedFirebaseApp(name: 'territories-v2' | 'control-v2') {
   return getApp(name)
 }
-

@@ -369,6 +369,9 @@ textarea { min-height: 130px; resize: vertical; }
 .publisher-list > div { padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 10px; }
 
 .not-found { min-height: 100vh; }
+.startup-error { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 30px; color: var(--muted); text-align: center; background: var(--cream); }
+.startup-error h1, .startup-error p { max-width: 680px; margin: 0; }
+.startup-error h1 { color: var(--green-950); font-family: Georgia, serif; font-size: clamp(2rem, 5vw, 3.5rem); }
 
 @media (max-width: 1100px) {
   .hero { grid-template-columns: 1fr 420px; gap: 44px; }
