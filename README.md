@@ -16,7 +16,7 @@ Um snapshot de segurança foi criado em `.local-backups`. Essa pasta e o arquivo
 ## Estrutura
 
 ```text
-v2/
+territorios/
 ├── public/territories/      mapas estáticos existentes
 ├── scripts/                 backup somente leitura do Firestore
 ├── firebase/                modelos de regras (não publicados automaticamente)
@@ -32,7 +32,7 @@ v2/
 Requer Node.js 20.19 ou superior.
 
 ```powershell
-cd "C:\Users\enipr\Desktop\Pessoal\Codigos e Projetos\Territorio\territorios\v2"
+cd "C:\Users\enipr\Desktop\Pessoal\Codigos e Projetos\Territorio\territorios"
 npm install
 npm run dev
 ```

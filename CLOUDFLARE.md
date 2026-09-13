@@ -13,7 +13,7 @@ Este projeto está preparado para ser publicado como um Worker com Static Assets
 ## Conferência local
 
 ```powershell
-cd "C:\Users\enipr\Desktop\Pessoal\Codigos e Projetos\Territorio\territorios\v2"
+cd "C:\Users\enipr\Desktop\Pessoal\Codigos e Projetos\Territorio\territorios"
 npm ci
 npm run test
 npm run cf:check
@@ -23,19 +23,17 @@ npm run cf:check
 
 ## Opção A — conectar o GitHub no painel do Cloudflare
 
-Envie o repositório ao GitHub. Como a nova aplicação está dentro do repositório antigo, use estas configurações ao importar o projeto em **Workers & Pages**:
+Envie o repositório ao GitHub e use estas configurações ao importar o projeto em **Workers & Pages**:
 
 | Configuração | Valor |
 | --- | --- |
 | Nome | `territorios-capela-v2` |
 | Branch de produção | `main` (ou a branch principal utilizada) |
-| Diretório raiz | `v2` |
+| Diretório raiz | vazio (raiz do repositório) |
 | Comando de build | `npm run build` |
 | Comando de deploy | `npx wrangler deploy` |
 | Deploy de branches não produtivas | `npx wrangler versions upload` |
 | Diretório de saída | `dist` |
-
-Se o GitHub receber somente o conteúdo da pasta `v2` como raiz do repositório, deixe **Diretório raiz** vazio.
 
 ### Variáveis do build
 
