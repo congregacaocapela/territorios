@@ -73,7 +73,7 @@ O comando consulta as coleções conhecidas e grava um JSON datado em `.local-ba
 
 ## Publicação
 
-`npm run build` cria a pasta `dist`. O servidor escolhido deve redirecionar rotas desconhecidas para `index.html`; o arquivo `public/_redirects` já cobre hospedagens compatíveis com essa convenção.
+`npm run build` cria a pasta `dist`. No Cloudflare, o fallback das rotas para `index.html` é configurado diretamente por `assets.not_found_handling` em `wrangler.jsonc`.
 
 O service worker é gerado automaticamente. O código essencial entra no cache inicial; as imagens de mapas, que somam mais de 16 MB, só são armazenadas quando o usuário as abre.
 

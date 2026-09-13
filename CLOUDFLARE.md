@@ -27,7 +27,7 @@ Envie o repositório ao GitHub e use estas configurações ao importar o projeto
 
 | Configuração | Valor |
 | --- | --- |
-| Nome | `territorios-capela-v2` |
+| Nome | `territorios` |
 | Branch de produção | `main` (ou a branch principal utilizada) |
 | Diretório raiz | vazio (raiz do repositório) |
 | Comando de build | `npm run build` |
@@ -87,7 +87,7 @@ Os comandos geram o build antes de enviar os arquivos.
 3. Aplique a custom claim `admin: true` à conta nos dois projetos.
 4. Revise e publique `firebase/territories.rules` no projeto dos territórios.
 5. Revise e publique `firebase/control.rules` no projeto do painel.
-6. Inclua o hostname exato fornecido pelo Cloudflare, por exemplo `territorios-capela-v2.seu-subdominio.workers.dev`, na lista de domínios autorizados dos dois projetos Firebase.
+6. Inclua o hostname exato fornecido pelo Cloudflare, por exemplo `territorios.seu-subdominio.workers.dev`, na lista de domínios autorizados dos dois projetos Firebase.
 
 Os modelos de regras não são publicados automaticamente. Para um teste anterior à configuração completa do Firebase, proteja toda a URL de preview com Cloudflare Access; não desative a autenticação administrativa no build público.
 
