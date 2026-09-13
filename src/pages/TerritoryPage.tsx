@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, ChevronRight, ExternalLink, Image, Info, Map, MapPinned } from 'lucide-react'
 import { lazy, Suspense, useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { PublicHeader } from '../components/Layouts'
 import { MapImageModal } from '../components/MapImageModal'
@@ -19,6 +19,7 @@ interface PendingHouse { block: string; street: string; house: string; current: 
 export function TerritoryPage() {
   const { id } = useParams()
   const { territory, loading, error } = useTerritory(id)
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [imageOpen, setImageOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
@@ -61,20 +62,20 @@ export function TerritoryPage() {
     }
   }
 
-  if (loading) return <div className="public-page"><PublicHeader /><LoadingState message="Carregando território…" /></div>
-  if (error) return <div className="public-page"><PublicHeader /><ErrorState message={error} /></div>
-  if (!territory) return <div className="public-page"><PublicHeader /><main className="empty-state"><MapPinned /><h1>Território não encontrado</h1><Link className="button button--primary" to="/portal">Voltar ao portal</Link></main></div>
+  if (loading) return <div className="public-page territory-page"><PublicHeader hideNav /><LoadingState message="Carregando território…" /></div>
+  if (error) return <div className="public-page territory-page"><PublicHeader hideNav /><ErrorState message={error} /></div>
+  if (!territory) return <div className="public-page territory-page"><PublicHeader hideNav /><main className="empty-state"><MapPinned /><h1>Território não encontrado</h1><Link className="button button--primary" to="/portal">Voltar ao portal</Link></main></div>
 
   const globalMap = territory.mapData?.global as GlobalMapData | undefined
   const blockMap = blockName ? territory.mapData?.[blockName] as Record<string, StreetMapData> | undefined : undefined
   const streetMap = blockName && streetName ? blockMap?.[streetName] : undefined
 
   return (
-    <div className="public-page public-page--muted">
-      <PublicHeader />
+    <div className="public-page public-page--muted territory-page">
+      <PublicHeader hideNav />
       <main className="territory-view">
         <div className="territory-toolbar">
-          <button className="button button--ghost button--small" onClick={() => streetName ? setParams({ quadra: blockName }) : blockName ? setParams({}) : history.back()}><ArrowLeft size={17} /> Voltar</button>
+          <button className="button button--ghost button--small" onClick={() => streetName ? setParams({ quadra: blockName }) : blockName ? setParams({}) : navigate('/portal')}><ArrowLeft size={17} /> Voltar</button>
           <div>
             <span className="eyebrow">Território {normalizeId(territory.id)}</span>
             <h1>{territory.name}</h1>

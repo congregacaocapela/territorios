@@ -4,17 +4,23 @@ import { Link, NavLink, Outlet } from 'react-router-dom'
 import { AdminGuard } from './AdminGuard'
 import { ControlDataProvider } from '../contexts/ControlDataContext'
 
-export function PublicHeader() {
+interface PublicHeaderProps {
+  hideNav?: boolean
+}
+
+export function PublicHeader({ hideNav = false }: PublicHeaderProps) {
   return (
-    <header className="public-header">
+    <header className={hideNav ? 'public-header public-header--minimal' : 'public-header'}>
       <Link to="/" className="brand-link" aria-label="Página inicial">
         <span className="brand-mark"><Route /></span>
         <span><strong>Territórios</strong><small>Congregação Capela</small></span>
       </Link>
-      <nav>
-        <NavLink to="/portal">Explorar territórios</NavLink>
-        <NavLink to="/admin/painel">Administração</NavLink>
-      </nav>
+      {!hideNav && (
+        <nav>
+          <NavLink to="/portal">Explorar territórios</NavLink>
+          <NavLink to="/admin/painel">Administração</NavLink>
+        </nav>
+      )}
     </header>
   )
 }

@@ -44,6 +44,7 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .public-page--muted { background: var(--cream); }
 
 .public-header { position: sticky; top: 0; z-index: 900; min-height: 74px; padding: 0 clamp(20px, 5vw, 72px); display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(25, 53, 47, .12); background: rgba(255, 254, 251, .94); backdrop-filter: blur(18px); }
+.public-header--minimal { justify-content: flex-start; }
 .brand-link, .admin-sidebar__brand { display: flex; align-items: center; gap: 12px; }
 .brand-link > span:last-child, .admin-sidebar__brand > div { display: flex; flex-direction: column; }
 .brand-link strong, .admin-sidebar__brand strong { color: var(--green-950); font-size: 1.05rem; }
@@ -181,6 +182,11 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .map-empty { position: absolute; z-index: 500; left: 50%; bottom: 16px; margin: 0; padding: 8px 13px; border-radius: 10px; color: var(--green-900); background: rgba(255,254,251,.94); transform: translateX(-50%); box-shadow: var(--shadow-sm); }
 .map-block-label { display: grid; place-items: center; border: 3px solid white; border-radius: 10px; color: white; background: var(--orange); box-shadow: 0 5px 15px rgba(0,0,0,.22); font-weight: 900; }
 .map-block-label span { display: grid; place-items: center; width: 100%; height: 100%; }
+
+/* A tela de território é uma experiência focada: o cabeçalho verde ocupa toda a largura. */
+.territory-page .territory-view { width: 100%; max-width: none; padding: 0 0 90px; }
+.territory-page .territory-toolbar { border-radius: 0; padding-right: clamp(20px, 5vw, 72px); padding-left: clamp(20px, 5vw, 72px); box-shadow: 0 8px 24px rgba(17, 47, 41, .12); }
+.territory-page .territory-content { width: min(1480px, 100%); margin: 0 auto; padding-right: clamp(20px, 4vw, 58px); padding-left: clamp(20px, 4vw, 58px); }
 
 .async-state, .empty-state, .not-found { min-height: 340px; padding: 50px 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; color: var(--muted); text-align: center; }
 .async-state svg, .empty-state > svg, .not-found > svg { width: 34px; height: 34px; color: var(--green-600); }
