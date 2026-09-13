@@ -28,7 +28,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--cream); }
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
@@ -114,7 +114,7 @@ button:disabled { opacity: .48; cursor: not-allowed; }
 .page-heading--split { display: flex; align-items: end; justify-content: space-between; gap: 30px; }
 .search-field { width: min(430px, 100%); min-height: 52px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--white); box-shadow: var(--shadow-sm); }
 .search-field svg { color: var(--muted); }
-.search-field input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--ink); background: transparent; }
+.search-field input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 16px; line-height: 1.35; }
 .search-field button { border: 0; background: transparent; cursor: pointer; }
 .portal-results { margin-bottom: 16px; color: var(--muted); font-size: .86rem; }
 .portal-results strong { color: var(--ink); }
